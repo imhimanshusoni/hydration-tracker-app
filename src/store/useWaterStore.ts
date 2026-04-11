@@ -44,13 +44,13 @@ export const useWaterStore = create<WaterState>()(
         const { lastLogAmount, consumed } = get();
         if (lastLogAmount === null) return;
         const newConsumed = Math.max(0, consumed - lastLogAmount);
-        const lastLogged = get().lastLoggedAt;
         set({
           consumed: newConsumed,
           lastLogAmount: null,
+          lastLoggedAt: null,
         });
         const { dailyGoal } = useUserStore.getState();
-        writeWidgetData(dailyGoal, newConsumed, lastLogged);
+        writeWidgetData(dailyGoal, newConsumed, null);
       },
 
       checkMidnightReset: () => {

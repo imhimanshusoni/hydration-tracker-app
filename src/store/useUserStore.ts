@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage, writeWidgetData, storage as mmkv } from './mmkv';
+import { zustandStorage, writeWidgetData } from './mmkv';
 import { calculateDailyGoal } from '../utils/waterCalculator';
 import type { TimeOfDay, UserProfile } from '../types';
 
@@ -49,10 +49,10 @@ export const useUserStore = create<UserState>()(
         const age = updates.age ?? current.age;
         const goal = calculateDailyGoal(weight, age);
         set({ ...updates, dailyGoal: goal });
-        // Update widget goal — consumed stays the same
-        const consumed = mmkv.getNumber('widget:consumed') ?? 0;
-        const lastLogged = mmkv.getString('widget:lastLogged') ?? null;
-        writeWidgetData(goal, consumed, lastLogged);
+        // Update widget goal — read consumed from water store (canonical source)
+        const { useWaterStore } = require('./useWaterStore');
+        const { consumed, lastLoggedAt } = useWaterStore.getState();
+        writeWidgetData(goal, consumed, lastLoggedAt);
       },
 
       updateSchedule: (updates) => {
