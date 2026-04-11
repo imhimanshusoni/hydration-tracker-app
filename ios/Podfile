@@ -17,6 +17,9 @@ end
 target 'WaterReminder' do
   config = use_native_modules!
 
+  # react-native-mmkv v4+ requires NitroModules from react-native-nitro-modules
+  pod 'NitroModules', :path => '../node_modules/react-native-nitro-modules'
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
