@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import type { AppTheme } from '../theme';
+import { Fonts } from '../fonts';
 
 interface WaterProgressBarProps {
   consumed: number;
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
   },
   consumedValue: {
     fontSize: 48,
-    fontWeight: '200',
+    fontFamily: Fonts.thin,
     letterSpacing: -1,
   },
   goalRow: {
@@ -133,11 +134,11 @@ const styles = StyleSheet.create({
   },
   goalSlash: {
     fontSize: 16,
-    fontWeight: '300',
+    fontFamily: Fonts.light,
   },
   goalValue: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
   percentageBadge: {
     marginTop: 10,
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   },
   percentageText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },
 });

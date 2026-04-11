@@ -12,6 +12,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import type { AppTheme } from '../theme';
+import { Fonts } from '../fonts';
 
 interface LogWaterModalProps {
   visible: boolean;
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     letterSpacing: 0.3,
     marginBottom: 24,
   },
@@ -168,11 +169,11 @@ const styles = StyleSheet.create({
   },
   presetAmount: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
   presetUnit: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     marginTop: 2,
   },
   customSection: {
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   },
   customLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 10,
@@ -195,12 +196,12 @@ const styles = StyleSheet.create({
   },
   customInput: {
     fontSize: 32,
-    fontWeight: '200',
+    fontFamily: Fonts.light,
     minWidth: 80,
   },
   mlUnit: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     marginLeft: 4,
   },
   rangeRow: {
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
   },
   rangeText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
   logButton: {
     paddingVertical: 18,
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   logButtonText: {
     color: '#0A0F1E',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
   cancelButton: {
@@ -234,6 +235,6 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
 });

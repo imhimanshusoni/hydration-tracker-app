@@ -17,6 +17,7 @@ import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
 import type { TimeOfDay } from '../types';
 import { requestNotificationPermission } from '../utils/notificationScheduler';
+import { Fonts } from '../fonts';
 
 function timeToString(t: TimeOfDay): string {
   return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
@@ -183,15 +184,16 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 24, paddingTop: 60 },
-  heading: { fontSize: 28, fontWeight: '700', marginBottom: 8 },
-  subheading: { fontSize: 16, marginBottom: 32 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 6, marginTop: 16 },
+  heading: { fontSize: 28, fontFamily: Fonts.bold, marginBottom: 8 },
+  subheading: { fontSize: 16, fontFamily: Fonts.regular, marginBottom: 32 },
+  label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 6, marginTop: 16 },
   input: {
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
+    fontFamily: Fonts.medium,
   },
   timeButton: {
     borderWidth: 1,
@@ -199,12 +201,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  errorText: { fontSize: 12, marginTop: 4 },
+  errorText: { fontSize: 12, fontFamily: Fonts.medium, marginTop: 4 },
   submitButton: {
     marginTop: 32,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
   },
-  submitText: { fontSize: 16, fontWeight: '700' },
+  submitText: { fontSize: 16, fontFamily: Fonts.bold },
 });

@@ -29,6 +29,7 @@ import { useWaterStore } from '../store/useWaterStore';
 import { WaterProgressBar } from '../components/WaterProgressBar';
 import { LogWaterModal } from '../components/LogWaterModal';
 import { scheduleReminders } from '../utils/notificationScheduler';
+import { Fonts } from '../fonts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -274,18 +275,18 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     letterSpacing: 0.3,
   },
   name: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: -0.3,
     marginTop: 2,
   },
   goalLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     marginTop: 6,
     letterSpacing: 0.2,
   },
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     marginBottom: 12,
   },
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
   },
   quickLogAmount: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
 
@@ -352,11 +353,11 @@ const styles = StyleSheet.create({
   },
   lastLogText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
   },
   lastLogTime: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
 
   // Undo toast
@@ -387,12 +388,12 @@ const styles = StyleSheet.create({
   undoText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     marginLeft: 8,
   },
   undoAction: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
 });

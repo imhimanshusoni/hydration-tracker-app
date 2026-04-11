@@ -27,6 +27,7 @@ import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
 import { scheduleReminders, cancelAllReminders } from '../utils/notificationScheduler';
 import type { TimeOfDay } from '../types';
+import { Fonts } from '../fonts';
 
 function timeToString(t: TimeOfDay): string {
   return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: -0.3,
     paddingTop: 16,
     marginBottom: 24,
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     marginBottom: 16,
   },
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   // Fields
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     letterSpacing: 0.3,
     marginBottom: 6,
     marginTop: 12,
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
   fieldRow: {
     flexDirection: 'row',
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     marginTop: 4,
   },
 
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
   },
   goalLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
   goalBadge: {
     paddingHorizontal: 14,
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
   },
   goalValue: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
 
@@ -359,11 +360,11 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
   },
   toggleDesc: {
     fontSize: 12,
-    fontWeight: '400',
+    fontFamily: Fonts.regular,
     marginTop: 2,
   },
 
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
   },
   timeValue: {
     fontSize: 22,
-    fontWeight: '300',
+    fontFamily: Fonts.light,
     letterSpacing: 1,
   },
 
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
   appInfo: {
     textAlign: 'center',
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     marginTop: 16,
     letterSpacing: 0.3,
   },

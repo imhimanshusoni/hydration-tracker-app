@@ -14,6 +14,7 @@ import { useUserStore } from './src/store/useUserStore';
 import { useWaterStore } from './src/store/useWaterStore';
 import { scheduleReminders } from './src/utils/notificationScheduler';
 import { HomeIcon, SettingsIcon } from './src/components/TabIcons';
+import { Fonts } from './src/fonts';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,7 +34,7 @@ function MainTabs() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontFamily: Fonts.semiBold,
           letterSpacing: 0.5,
         },
       }}
