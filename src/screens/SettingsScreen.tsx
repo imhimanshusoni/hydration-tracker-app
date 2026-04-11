@@ -56,8 +56,6 @@ export function SettingsScreen() {
   const weatherBonus = useGoalStore((s) => s.weatherBonus);
   const activityBonus = useGoalStore((s) => s.activityBonus);
   const activityBump = useGoalStore((s) => s.activityBump);
-  const weatherSource = useGoalStore((s) => s.weatherSource);
-  const lastTemp = useGoalStore((s) => s.lastTemp);
 
   const consumed = useWaterStore((s) => s.consumed);
 
@@ -277,14 +275,6 @@ export function SettingsScreen() {
           ))}
         </View>
 
-        <View style={[styles.weatherRow, { borderTopColor: theme.border }]}>
-          <Text style={[styles.weatherLabel, { color: theme.textSecondary }]}>Today's weather</Text>
-          <Text style={[styles.weatherValue, { color: theme.text }]}>
-            {weatherSource === 'api' && lastTemp !== null
-              ? `Auto (${Math.round(lastTemp)}°C)`
-              : `Manual (${climatePreference.charAt(0).toUpperCase() + climatePreference.slice(1)})`}
-          </Text>
-        </View>
       </View>
 
       {/* Reminders card */}
@@ -476,24 +466,6 @@ const styles = StyleSheet.create({
   pillTextSmall: {
     fontSize: 11,
     fontFamily: Fonts.semiBold,
-  },
-
-  // Weather
-  weatherRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    marginTop: 16,
-    paddingTop: 12,
-  },
-  weatherLabel: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-  },
-  weatherValue: {
-    fontSize: 13,
-    fontFamily: Fonts.medium,
   },
 
   // Toggle

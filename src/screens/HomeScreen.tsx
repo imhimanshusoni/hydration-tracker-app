@@ -30,6 +30,7 @@ import { LogWaterModal } from '../components/LogWaterModal';
 import { scheduleReminders } from '../utils/notificationScheduler';
 import { getTodayActiveMinutes } from '../utils/healthService';
 import { Fonts } from '../fonts';
+import { WeatherCard } from '../components/WeatherCard';
 
 const QUICK_LOG = [150, 250, 500];
 
@@ -195,6 +196,9 @@ export function HomeScreen() {
           </Text>
           <Text style={[styles.name, { color: theme.text }]}>{name}</Text>
         </View>
+
+        {/* Weather card */}
+        <WeatherCard theme={theme} />
 
         {/* Hero progress ring with water fill */}
         <View style={styles.ringSection}>
