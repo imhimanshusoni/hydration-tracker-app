@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Water drop — positioned in the 72dp safe zone (centered in 108dp canvas) -->
+    <!-- Safe zone is 18dp inset on each side -->
+
+    <!-- Drop outer shape — teal gradient simulated with solid teal -->
+    <path
+        android:pathData="M54,18 C54,18 30,42 30,56 C30,69.2 40.8,80 54,80 C67.2,80 78,69.2 78,56 C78,42 54,18 54,18Z"
+        android:fillColor="#00C9B8"/>
+
+    <!-- Drop inner cutout for depth -->
+    <path
+        android:pathData="M54,26 C54,26 35.5,46 35.5,56 C35.5,66.2 43.8,74.5 54,74.5 C64.2,74.5 72.5,66.2 72.5,56 C72.5,46 54,26 54,26Z"
+        android:fillColor="#0A0F1E"
+        android:fillAlpha="0.55"/>
+
+    <!-- Inner fill for glass effect -->
+    <path
+        android:pathData="M54,32 C54,32 39,48 39,56 C39,64.3 45.7,71 54,71 C62.3,71 69,64.3 69,56 C69,48 54,32 54,32Z"
+        android:fillColor="#00C9B8"
+        android:fillAlpha="0.15"/>
+
+    <!-- Left teal accent -->
+    <path
+        android:pathData="M42.5,56 C42.5,56 44.5,50 48.5,48 C49.3,47.6 49.6,48.2 49.1,48.7 C46.6,51 45.5,56 45.8,59.5 C45.9,60.5 44.8,60.8 44.4,60 C43.6,58.5 42.3,57 42.5,56Z"
+        android:fillColor="#00C9B8"
+        android:fillAlpha="0.9"/>
+
+    <!-- Right blue accent -->
+    <path
+        android:pathData="M65.5,55 C65.5,55 63.5,49 59.8,47 C59,46.5 58.7,47.2 59.2,47.7 C61.7,50 63,55 62.5,58.5 C62.4,59.5 63.5,59.8 63.9,59 C64.7,57.5 65.7,56 65.5,55Z"
+        android:fillColor="#4D8FFF"
+        android:fillAlpha="0.85"/>
+
+    <!-- Top specular highlight -->
+    <path
+        android:pathData="M54,25 C52.5,25 51.5,26.5 51.5,28 C51.5,29.5 52.5,31 54,31 C55.5,31 56.5,29.5 56.5,28 C56.5,26.5 55.5,25 54,25Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.2"/>
+
+</vector>
