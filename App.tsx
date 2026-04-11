@@ -3,7 +3,7 @@
 // bottom tab navigator (Home, Settings) otherwise.
 
 import React, { useEffect } from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -21,7 +21,20 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2196F3',
+        tabBarActiveTintColor: '#00C9B8',
+        tabBarInactiveTintColor: '#8899BB',
+        tabBarStyle: {
+          backgroundColor: '#0A0F1E',
+          borderTopColor: '#1A2A4A',
+          borderTopWidth: 1,
+          paddingTop: 8,
+          height: 88,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.5,
+        },
       }}
     >
       <Tab.Screen
@@ -39,7 +52,6 @@ function MainTabs() {
 }
 
 function App() {
-  const colorScheme = useColorScheme();
   const onboardingComplete = useUserStore((s) => s.onboardingComplete);
 
   // Schedule initial notifications on app start (if onboarded)
@@ -53,7 +65,7 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="light-content" backgroundColor="#0A0F1E" />
       {onboardingComplete ? (
         <NavigationContainer>
           <MainTabs />

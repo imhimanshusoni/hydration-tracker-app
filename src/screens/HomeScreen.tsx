@@ -1,16 +1,28 @@
-// Home screen: shows greeting, circular progress ring, log button, and undo toast.
-// Checks for midnight reset on foreground and reschedules notifications on log.
+// HomeScreen — Premium dark-mode instrument panel design.
+//
+// Design decisions:
+// - Deep navy (#0A0F1E) base creates depth and lets the teal progress ring glow
+// - Time-aware greeting ("Good morning/afternoon/evening") adds personality
+// - The progress ring is the hero: large, centered, with gradient arc and
+//   decorative concentric rings for an instrument-panel feel
+// - Quick-log buttons are frosted glass cards with emoji icons — tactile, not flat
+// - Today's log section shows recent entries as a subtle timeline
+// - Undo toast uses the accent border for visibility without being loud
+// - All touch targets are 48pt+ for iOS HIG compliance
+// - Generous spacing (24px horizontal, 16-20px vertical gaps) prevents cramping
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  ScrollView,
   StyleSheet,
-  useColorScheme,
   AppState,
   Animated,
+  Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
@@ -18,9 +30,34 @@ import { WaterProgressBar } from '../components/WaterProgressBar';
 import { LogWaterModal } from '../components/LogWaterModal';
 import { scheduleReminders } from '../utils/notificationScheduler';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Quick-log presets with icons
+const QUICK_LOG = [
+  { ml: 150, label: '150ml', icon: '💧' },
+  { ml: 250, label: '250ml', icon: '🥤' },
+  { ml: 500, label: '500ml', icon: '🫗' },
+];
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function formatLogTime(isoString: string): string {
+  const d = new Date(isoString);
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
 export function HomeScreen() {
-  const colorScheme = useColorScheme();
-  const theme = getTheme(colorScheme);
+  const theme = getTheme(null);
+  const insets = useSafeAreaInsets();
 
   const name = useUserStore((s) => s.name);
   const dailyGoal = useUserStore((s) => s.dailyGoal);
@@ -30,6 +67,7 @@ export function HomeScreen() {
 
   const consumed = useWaterStore((s) => s.consumed);
   const lastLogAmount = useWaterStore((s) => s.lastLogAmount);
+  const lastLoggedAt = useWaterStore((s) => s.lastLoggedAt);
   const logWater = useWaterStore((s) => s.logWater);
   const undoLastLog = useWaterStore((s) => s.undoLastLog);
   const checkMidnightReset = useWaterStore((s) => s.checkMidnightReset);
@@ -44,84 +82,176 @@ export function HomeScreen() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         checkMidnightReset();
-        // Reschedule notifications in case day rolled over
-        scheduleReminders(wakeUpTime, sleepTime, useWaterStore.getState().consumed, dailyGoal, remindersEnabled);
+        scheduleReminders(
+          wakeUpTime,
+          sleepTime,
+          useWaterStore.getState().consumed,
+          dailyGoal,
+          remindersEnabled,
+        );
       }
     });
     return () => sub.remove();
   }, [checkMidnightReset, wakeUpTime, sleepTime, dailyGoal, remindersEnabled]);
 
-  // Also check on mount
   useEffect(() => {
     checkMidnightReset();
   }, [checkMidnightReset]);
 
-  const handleLog = useCallback((amount: number) => {
-    logWater(amount);
-    const newConsumed = consumed + amount;
+  const handleQuickLog = useCallback(
+    (amount: number) => {
+      logWater(amount);
+      const newConsumed = consumed + amount;
+      scheduleReminders(wakeUpTime, sleepTime, newConsumed, dailyGoal, remindersEnabled);
+      showUndoToast();
+    },
+    [consumed, logWater, wakeUpTime, sleepTime, dailyGoal, remindersEnabled],
+  );
 
-    // Reschedule notifications with updated consumption
-    scheduleReminders(wakeUpTime, sleepTime, newConsumed, dailyGoal, remindersEnabled);
+  const handleModalLog = useCallback(
+    (amount: number) => {
+      logWater(amount);
+      const newConsumed = consumed + amount;
+      scheduleReminders(wakeUpTime, sleepTime, newConsumed, dailyGoal, remindersEnabled);
+      showUndoToast();
+    },
+    [consumed, logWater, wakeUpTime, sleepTime, dailyGoal, remindersEnabled],
+  );
 
-    // Show undo toast
+  function showUndoToast() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setShowUndo(true);
     Animated.timing(undoOpacity, {
       toValue: 1,
-      duration: 200,
+      duration: 250,
       useNativeDriver: true,
     }).start();
-
     undoTimer.current = setTimeout(() => {
       Animated.timing(undoOpacity, {
         toValue: 0,
-        duration: 200,
+        duration: 250,
         useNativeDriver: true,
       }).start(() => setShowUndo(false));
     }, 5000);
-  }, [consumed, logWater, wakeUpTime, sleepTime, dailyGoal, remindersEnabled, undoOpacity]);
+  }
 
   const handleUndo = useCallback(() => {
     undoLastLog();
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setShowUndo(false);
     undoOpacity.setValue(0);
-
-    // Reschedule with reverted consumption
     const reverted = useWaterStore.getState().consumed;
     scheduleReminders(wakeUpTime, sleepTime, reverted, dailyGoal, remindersEnabled);
   }, [undoLastLog, wakeUpTime, sleepTime, dailyGoal, remindersEnabled, undoOpacity]);
 
+  const goalL = (dailyGoal / 1000).toFixed(1);
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.greeting, { color: theme.text }]}>Hi, {name}</Text>
-
-      <View style={styles.progressContainer}>
-        <WaterProgressBar consumed={consumed} dailyGoal={dailyGoal} theme={theme} />
-      </View>
-
-      <TouchableOpacity
-        style={[styles.logButton, { backgroundColor: theme.accent }]}
-        onPress={() => setModalVisible(true)}
+    <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.logButtonText}>Log Water</Text>
-      </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.greeting, { color: theme.textSecondary }]}>
+            {getGreeting()},
+          </Text>
+          <Text style={[styles.name, { color: theme.text }]}>{name}</Text>
+          <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>
+            Daily goal: {goalL}L
+          </Text>
+        </View>
 
+        {/* Hero progress ring */}
+        <View style={styles.ringSection}>
+          <WaterProgressBar consumed={consumed} dailyGoal={dailyGoal} theme={theme} />
+        </View>
+
+        {/* Quick-log buttons */}
+        <View style={styles.quickLogSection}>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+            QUICK LOG
+          </Text>
+          <View style={styles.quickLogRow}>
+            {QUICK_LOG.map(({ ml, label, icon }) => (
+              <TouchableOpacity
+                key={ml}
+                style={[
+                  styles.quickLogButton,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+                onPress={() => handleQuickLog(ml)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.quickLogIcon}>{icon}</Text>
+                <Text style={[styles.quickLogAmount, { color: theme.text }]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+            {/* Custom button */}
+            <TouchableOpacity
+              style={[
+                styles.quickLogButton,
+                { backgroundColor: theme.surface, borderColor: theme.accent },
+              ]}
+              onPress={() => setModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.quickLogIcon, { fontSize: 18 }]}>+</Text>
+              <Text style={[styles.quickLogAmount, { color: theme.accent }]}>Custom</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Last logged indicator */}
+        {lastLoggedAt && (
+          <View style={[styles.lastLogCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.logDot, { backgroundColor: theme.accent }]} />
+            <View style={styles.lastLogContent}>
+              <Text style={[styles.lastLogText, { color: theme.text }]}>
+                Last logged {lastLogAmount}ml
+              </Text>
+              <Text style={[styles.lastLogTime, { color: theme.textSecondary }]}>
+                {formatLogTime(lastLoggedAt)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Bottom spacer for tab bar */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Log Water Modal */}
       <LogWaterModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onLog={handleLog}
+        onLog={handleModalLog}
         theme={theme}
       />
 
       {/* Undo toast */}
       {showUndo && (
-        <Animated.View style={[styles.undoToast, { backgroundColor: theme.surface, borderColor: theme.border, opacity: undoOpacity }]}>
-          <Text style={{ color: theme.text }}>
-            Logged {lastLogAmount} ml
+        <Animated.View
+          style={[
+            styles.undoToast,
+            {
+              backgroundColor: theme.surface,
+              borderColor: theme.accent,
+              opacity: undoOpacity,
+              bottom: 100 + insets.bottom,
+            },
+          ]}
+        >
+          <View style={[styles.undoAccent, { backgroundColor: theme.accent }]} />
+          <Text style={[styles.undoText, { color: theme.text }]}>
+            +{lastLogAmount}ml logged
           </Text>
-          <TouchableOpacity onPress={handleUndo}>
-            <Text style={{ color: theme.accent, fontWeight: '700', marginLeft: 16 }}>Undo</Text>
+          <TouchableOpacity
+            onPress={handleUndo}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={[styles.undoAction, { color: theme.accent }]}>Undo</Text>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -130,33 +260,139 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 60 },
-  greeting: { fontSize: 24, fontWeight: '700', paddingHorizontal: 24 },
-  progressContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  logButton: {
-    marginHorizontal: 24,
-    marginBottom: 32,
+  screen: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+  },
+
+  // Header
+  header: {
+    paddingTop: 16,
+    marginBottom: 8,
+  },
+  greeting: {
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+  name: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  goalLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 6,
+    letterSpacing: 0.2,
+  },
+
+  // Progress ring
+  ringSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+
+  // Quick log
+  quickLogSection: {
+    marginTop: 8,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 12,
+  },
+  quickLogRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  quickLogButton: {
+    flex: 1,
+    alignItems: 'center',
     paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    minHeight: 80,
+    justifyContent: 'center',
+  },
+  quickLogIcon: {
+    fontSize: 22,
+    marginBottom: 6,
+  },
+  quickLogAmount: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  // Last log
+  lastLogCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    padding: 16,
     borderRadius: 14,
+    borderWidth: 1,
+  },
+  logDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 14,
+  },
+  lastLogContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  lastLogText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  lastLogTime: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
+  // Undo toast
   undoToast: {
     position: 'absolute',
-    bottom: 100,
     left: 24,
     right: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    elevation: 4,
+    overflow: 'hidden',
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  undoAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+  },
+  undoText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  undoAction: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

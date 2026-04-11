@@ -1,5 +1,6 @@
-// Modal for logging water intake.
-// Preset buttons (150/250/500 ml) + slider with text input (50-1000 ml).
+// Premium bottom-sheet modal for logging water intake.
+// Frosted glass surface on deep navy overlay.
+// Preset quick-log buttons + custom input with range clamping.
 
 import React, { useState } from 'react';
 import {
@@ -19,7 +20,11 @@ interface LogWaterModalProps {
   theme: AppTheme;
 }
 
-const PRESETS = [150, 250, 500];
+const PRESETS = [
+  { ml: 150, label: '150', icon: '💧' },
+  { ml: 250, label: '250', icon: '🥤' },
+  { ml: 500, label: '500', icon: '🫗' },
+];
 const MIN_CUSTOM = 50;
 const MAX_CUSTOM = 1000;
 
@@ -47,63 +52,68 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
   }
 
   function handleTextBlur() {
-    // Sync text field to clamped value on blur
     setCustomText(String(customAmount));
   }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { backgroundColor: theme.surface }]}>
+        <TouchableOpacity style={styles.backdropTap} activeOpacity={1} onPress={onClose} />
+        <View style={[styles.sheet, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {/* Drag handle */}
+          <View style={[styles.handle, { backgroundColor: theme.border }]} />
+
           <Text style={[styles.title, { color: theme.text }]}>Log Water</Text>
 
           {/* Preset buttons */}
           <View style={styles.presetRow}>
-            {PRESETS.map((ml) => (
+            {PRESETS.map(({ ml, label, icon }) => (
               <TouchableOpacity
                 key={ml}
-                style={[styles.presetButton, { borderColor: theme.accent }]}
+                style={[styles.presetButton, { backgroundColor: theme.background, borderColor: theme.border }]}
                 onPress={() => handlePreset(ml)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.presetText, { color: theme.accent }]}>{ml} ml</Text>
+                <Text style={styles.presetIcon}>{icon}</Text>
+                <Text style={[styles.presetAmount, { color: theme.text }]}>{label}</Text>
+                <Text style={[styles.presetUnit, { color: theme.textSecondary }]}>ml</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Custom amount section */}
-          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
-            Custom amount
-          </Text>
-
-          <View style={styles.customRow}>
-            <TextInput
-              style={[styles.customInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
-              keyboardType="numeric"
-              value={customText}
-              onChangeText={handleSliderText}
-              onBlur={handleTextBlur}
-              maxLength={4}
-            />
-            <Text style={[styles.mlLabel, { color: theme.textSecondary }]}>ml</Text>
+          {/* Custom amount */}
+          <View style={[styles.customSection, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Text style={[styles.customLabel, { color: theme.textSecondary }]}>Custom amount</Text>
+            <View style={styles.customInputRow}>
+              <TextInput
+                style={[styles.customInput, { color: theme.text }]}
+                keyboardType="numeric"
+                value={customText}
+                onChangeText={handleSliderText}
+                onBlur={handleTextBlur}
+                maxLength={4}
+                placeholderTextColor={theme.textSecondary}
+              />
+              <Text style={[styles.mlUnit, { color: theme.textSecondary }]}>ml</Text>
+            </View>
+            <View style={styles.rangeRow}>
+              <Text style={[styles.rangeText, { color: theme.textSecondary }]}>{MIN_CUSTOM}</Text>
+              <View style={[styles.rangeLine, { backgroundColor: theme.border }]} />
+              <Text style={[styles.rangeText, { color: theme.textSecondary }]}>{MAX_CUSTOM}</Text>
+            </View>
           </View>
 
-          {/* Slider - using a simple view-based approach since
-              @react-native-community/slider adds another dep.
-              The text input + presets cover the UX need. */}
-          <View style={styles.rangeHint}>
-            <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{MIN_CUSTOM} ml</Text>
-            <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{MAX_CUSTOM} ml</Text>
-          </View>
-
+          {/* Log button */}
           <TouchableOpacity
             style={[styles.logButton, { backgroundColor: theme.accent }]}
             onPress={handleCustomLog}
+            activeOpacity={0.8}
           >
             <Text style={styles.logButtonText}>Log {customAmount} ml</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={{ color: theme.textSecondary }}>Cancel</Text>
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.6}>
+            <Text style={[styles.cancelText, { color: theme.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -115,77 +125,115 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(5, 8, 18, 0.7)',
+  },
+  backdropTap: {
+    flex: 1,
   },
   sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
     padding: 24,
-    paddingBottom: 40,
+    paddingBottom: 44,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 24,
   },
   presetRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 20,
   },
   presetButton: {
     flex: 1,
-    marginHorizontal: 6,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 2,
     alignItems: 'center',
-  },
-  presetText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sectionLabel: {
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  customRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  customInput: {
-    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 18,
-    fontWeight: '600',
   },
-  mlLabel: {
-    fontSize: 16,
-    marginLeft: 10,
+  presetIcon: {
+    fontSize: 20,
+    marginBottom: 6,
   },
-  rangeHint: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  presetAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  presetUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  customSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
     marginBottom: 20,
   },
+  customLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  customInput: {
+    fontSize: 32,
+    fontWeight: '200',
+    minWidth: 80,
+  },
+  mlUnit: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  rangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rangeLine: {
+    flex: 1,
+    height: 1,
+  },
+  rangeText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
   logButton: {
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
   logButtonText: {
-    color: '#FFFFFF',
+    color: '#0A0F1E',
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
   cancelButton: {
     alignItems: 'center',
     paddingVertical: 10,
+  },
+  cancelText: {
+    fontSize: 15,
+    fontWeight: '500',
   },
 });
