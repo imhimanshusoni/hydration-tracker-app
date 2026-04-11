@@ -59,7 +59,7 @@ function iosGetActiveMinutes(): Promise<number> {
 
 async function androidRequestPermissions(): Promise<boolean> {
   try {
-    const { initialize, getSdkStatus, requestPermission, openHealthConnectSettings, SdkAvailabilityStatus } =
+    const { initialize, getSdkStatus, requestPermission, SdkAvailabilityStatus } =
       require('react-native-health-connect');
 
     const isInitialized = await initialize();
@@ -74,7 +74,6 @@ async function androidRequestPermissions(): Promise<boolean> {
     ]);
 
     if (!grantedPermissions || grantedPermissions.length === 0) {
-      await openHealthConnectSettings();
       return false;
     }
 

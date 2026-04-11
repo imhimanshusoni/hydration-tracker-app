@@ -17,7 +17,6 @@ import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
 import type { TimeOfDay, Gender, ActivityLevel } from '../types';
 import { requestNotificationPermission } from '../utils/notificationScheduler';
-import { requestHealthPermissions } from '../utils/healthService';
 import { Fonts } from '../fonts';
 
 function timeToString(t: TimeOfDay): string {
@@ -70,8 +69,6 @@ export function OnboardingScreen() {
       wakeUpTime,
       sleepTime,
     });
-    // Fire-and-forget health permissions request
-    requestHealthPermissions();
   }, [isValid, name, weight, age, gender, activityLevel, wakeUpTime, sleepTime, completeOnboarding]);
 
   function handleWakeTimeChange(_event: DateTimePickerEvent, date?: Date) {
