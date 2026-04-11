@@ -9,7 +9,7 @@
 // - Time buttons show time in a monospaced style for precision feel
 // - All touch targets 48pt+ for iOS HIG compliance
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
 import { useGoalStore } from '../store/useGoalStore';
 import { scheduleReminders, cancelAllReminders } from '../utils/notificationScheduler';
+import { requestHealthPermissions, checkHealthPermissions } from '../utils/healthService';
 import type { TimeOfDay, Gender, ActivityLevel, ClimatePreference } from '../types';
 import { Fonts } from '../fonts';
 
@@ -64,6 +65,12 @@ export function SettingsScreen() {
   const [ageText, setAgeText] = useState(String(age));
   const [showWakePicker, setShowWakePicker] = useState(false);
   const [showSleepPicker, setShowSleepPicker] = useState(false);
+  const [healthConnected, setHealthConnected] = useState(false);
+  const [healthConnecting, setHealthConnecting] = useState(false);
+
+  useEffect(() => {
+    checkHealthPermissions().then(setHealthConnected);
+  }, []);
 
   const parsedWeight = parseInt(weightText, 10);
   const parsedAge = parseInt(ageText, 10);
@@ -275,6 +282,39 @@ export function SettingsScreen() {
           ))}
         </View>
 
+      </View>
+
+      {/* Health card */}
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>HEALTH</Text>
+        <Text style={[styles.toggleDesc, { color: theme.textSecondary, marginBottom: 12 }]}>
+          {healthConnected
+            ? 'Tracking activity to auto-adjust your water goal'
+            : 'Connect to track activity and auto-adjust your water goal'}
+        </Text>
+        {healthConnected ? (
+          <View style={[styles.healthConnectedRow]}>
+            <View style={[styles.healthDot, { backgroundColor: '#4CAF50' }]} />
+            <Text style={[styles.healthConnectedText, { color: '#4CAF50' }]}>Connected</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.healthButton, { backgroundColor: healthConnecting ? theme.border : theme.accent }]}
+            onPress={async () => {
+              if (healthConnecting) return;
+              setHealthConnecting(true);
+              const granted = await requestHealthPermissions();
+              setHealthConnected(granted);
+              setHealthConnecting(false);
+            }}
+            activeOpacity={0.7}
+            disabled={healthConnecting}
+          >
+            <Text style={styles.healthButtonText}>
+              {healthConnecting ? 'Connecting...' : 'Connect Health'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Reminders card */}
@@ -513,6 +553,32 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: Fonts.light,
     letterSpacing: 1,
+  },
+
+  // Health
+  healthButton: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  healthButtonText: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: '#FFFFFF',
+  },
+  healthConnectedRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  healthDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  healthConnectedText: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
   },
 
   // Footer

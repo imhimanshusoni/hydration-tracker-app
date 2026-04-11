@@ -54,7 +54,7 @@ export function WeatherCard({ theme }: WeatherCardProps) {
     return null;
   }
 
-  const { tempC, feelsLikeC, humidity, conditionCode, conditionMain, description } = weatherData;
+  const { tempC, feelsLikeC, humidity, conditionCode, conditionMain, description, cityName } = weatherData;
   const { left, right } = getGradientColors(conditionMain, tempC);
 
   const WeatherIcon = getWeatherIcon(conditionCode);
@@ -75,13 +75,15 @@ export function WeatherCard({ theme }: WeatherCardProps) {
       {/* Icon */}
       <WeatherIcon size={48} />
 
-      {/* Center: condition + feels like */}
+      {/* Center: condition + location */}
       <View style={styles.centerColumn}>
         <Text style={[styles.conditionText, { color: theme.text }]}>
           {toTitleCase(description)}
         </Text>
         <Text style={[styles.feelsLikeText, { color: theme.textSecondary }]}>
-          Feels like {Math.round(feelsLikeC)}°C
+          {cityName
+            ? `${cityName} · Feels like ${Math.round(feelsLikeC)}°C`
+            : `Feels like ${Math.round(feelsLikeC)}°C`}
         </Text>
       </View>
 

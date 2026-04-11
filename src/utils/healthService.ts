@@ -59,16 +59,25 @@ function iosGetActiveMinutes(): Promise<number> {
 
 async function androidRequestPermissions(): Promise<boolean> {
   try {
-    const { initialize, getSdkStatus, requestPermission, SdkAvailabilityStatus } =
+    const { initialize, getSdkStatus, requestPermission, openHealthConnectSettings, SdkAvailabilityStatus } =
       require('react-native-health-connect');
+
+    const isInitialized = await initialize();
+    if (!isInitialized) return false;
+
     const status = await getSdkStatus();
     if (status !== SdkAvailabilityStatus.SDK_AVAILABLE) return false;
 
-    await initialize();
-    await requestPermission([
+    const grantedPermissions = await requestPermission([
       { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
       { accessType: 'read', recordType: 'ExerciseSession' },
     ]);
+
+    if (!grantedPermissions || grantedPermissions.length === 0) {
+      await openHealthConnectSettings();
+      return false;
+    }
+
     return true;
   } catch {
     return false;
@@ -111,6 +120,28 @@ export function isHealthAvailable(): boolean {
       // SDK_AVAILABLE check is async, but for a quick sync guard we return true
       // and let the actual async calls handle unavailability gracefully.
       return SdkAvailabilityStatus !== undefined;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+export async function checkHealthPermissions(): Promise<boolean> {
+  if (Platform.OS === 'ios') return iosRequestPermissions();
+  if (Platform.OS === 'android') {
+    try {
+      const { initialize, getGrantedPermissions } = require('react-native-health-connect');
+      const isInitialized = await initialize();
+      if (!isInitialized) return false;
+
+      const granted = await getGrantedPermissions();
+      const needed = ['ActiveCaloriesBurned', 'ExerciseSession'];
+      return needed.every((rt) =>
+        granted.some((p: { recordType: string; accessType: string }) =>
+          p.recordType === rt && p.accessType === 'read',
+        ),
+      );
     } catch {
       return false;
     }

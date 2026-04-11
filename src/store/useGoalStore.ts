@@ -59,6 +59,7 @@ export const useGoalStore = create<GoalState>()(
         } else {
           weatherBonus = getWeatherBonusFromClimate(profile.climatePreference);
           weatherSource = 'manual';
+          // weatherData stays null — card hides when no real weather is available
         }
 
         // Query today's active minutes

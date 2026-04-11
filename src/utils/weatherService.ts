@@ -1,7 +1,8 @@
 // Weather service: fetches current weather via device location + OpenWeatherMap.
 // Falls back to manual climate preference if location or API fails.
 
-import { Platform, PermissionsAndroid } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
+
 import Geolocation from 'react-native-geolocation-service';
 import { OPENWEATHERMAP_API_KEY } from '../config';
 import { getWeatherBonusFromTemp } from './waterCalculator';
@@ -15,7 +16,7 @@ export async function requestLocationPermission(): Promise<boolean> {
       return status === 'granted';
     }
     const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     );
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   } catch {
@@ -24,19 +25,24 @@ export async function requestLocationPermission(): Promise<boolean> {
 }
 
 function getCurrentPosition(): Promise<{ lat: number; lon: number } | null> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     Geolocation.getCurrentPosition(
-      (position) => {
+      position => {
         resolve({
           lat: position.coords.latitude,
           lon: position.coords.longitude,
         });
       },
-      () => resolve(null),
+      (error) => {
+        console.log('[Weather] geolocation error:', error.code, error.message);
+        resolve(null);
+      },
       {
         enableHighAccuracy: false,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 600000,
+        forceLocationManager: true,
+        showLocationDialog: true,
       },
     );
   });
@@ -49,19 +55,25 @@ export async function fetchCurrentWeather(): Promise<{
   conditionCode: number;
   conditionMain: string;
   description: string;
+  cityName: string | null;
 } | null> {
   try {
     const hasPermission = await requestLocationPermission();
+    console.log('[Weather] permission:', hasPermission);
     if (!hasPermission) return null;
 
     const coords = await getCurrentPosition();
+    console.log('[Weather] coords:', coords);
     if (!coords) return null;
 
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${OPENWEATHERMAP_API_KEY}`;
     const response = await fetch(url);
+    console.log('[Weather] API status:', response.status);
     if (!response.ok) return null;
 
     const data = await response.json();
+    console.log('[Weather] success:', data.weather[0].main, data.main.temp);
+
     return {
       tempC: data.main.temp,
       feelsLikeC: data.main.feels_like,
@@ -69,8 +81,10 @@ export async function fetchCurrentWeather(): Promise<{
       conditionCode: data.weather[0].id,
       conditionMain: data.weather[0].main,
       description: data.weather[0].description,
+      cityName: data.name ?? null,
     };
-  } catch {
+  } catch (e) {
+    console.log('[Weather] error:', e);
     return null;
   }
 }

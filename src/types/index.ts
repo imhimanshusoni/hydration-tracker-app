@@ -30,6 +30,7 @@ export interface WeatherData {
   conditionCode: number;
   conditionMain: string;
   description: string;
+  cityName: string | null;
 }
 
 export interface DailyGoalState {
