@@ -20,7 +20,6 @@ import {
   Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
@@ -57,26 +56,6 @@ function formatLogTime(isoString: string): string {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
   return `${h12}:${m} ${ampm}`;
-}
-
-// Small water drop icon for the quick-log buttons
-function DropIcon({ color, size }: { color: string; size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <Path
-        d="M8 1.5C8 1.5 3.5 7 3.5 10.5C3.5 13 5.5 15 8 15C10.5 15 12.5 13 12.5 10.5C12.5 7 8 1.5 8 1.5Z"
-        fill={color}
-        opacity={0.3}
-      />
-      <Path
-        d="M8 1.5C8 1.5 3.5 7 3.5 10.5C3.5 13 5.5 15 8 15C10.5 15 12.5 13 12.5 10.5C12.5 7 8 1.5 8 1.5Z"
-        stroke={color}
-        strokeWidth={1.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
 }
 
 export function HomeScreen() {
@@ -210,33 +189,32 @@ export function HomeScreen() {
           {getMotivation(progress)}
         </Text>
 
-        {/* Quick-log buttons — clean numeric, no labels, no emoji */}
+        {/* Quick-log buttons */}
         <View style={styles.quickLogRow}>
           {QUICK_LOG.map((ml) => (
             <TouchableOpacity
               key={ml}
-              style={[styles.quickLogButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              style={[styles.quickLogButton, { backgroundColor: theme.surface }]}
               onPress={() => handleQuickLog(ml)}
               activeOpacity={0.7}
             >
-              <DropIcon color={theme.accent} size={14} />
               <Text style={[styles.quickLogAmount, { color: theme.text }]}>{ml}</Text>
               <Text style={[styles.quickLogUnit, { color: theme.textSecondary }]}>ml</Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
-            style={[styles.quickLogButton, { backgroundColor: theme.surface, borderColor: theme.accentWarm }]}
+            style={[styles.customButton, { backgroundColor: theme.accentWarm }]}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.customPlus, { color: theme.accentWarm }]}>+</Text>
-            <Text style={[styles.quickLogAmount, { color: theme.accentWarm }]}>Custom</Text>
+            <Text style={[styles.customPlus, { color: '#FFFFFF' }]}>+</Text>
+            <Text style={[styles.customLabel, { color: '#FFFFFF' }]}>Custom</Text>
           </TouchableOpacity>
         </View>
 
         {/* Last logged */}
         {lastLoggedAt && (
-          <View style={[styles.lastLogCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.lastLogCard}>
             <View style={[styles.logDot, { backgroundColor: theme.accent }]} />
             <Text style={[styles.lastLogText, { color: theme.text }]}>
               {lastLogAmount}ml
@@ -315,26 +293,34 @@ const styles = StyleSheet.create({
   quickLogButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 4,
     borderRadius: 14,
-    borderWidth: 1,
-    minHeight: 72,
+    minHeight: 68,
     justifyContent: 'center',
-    gap: 3,
+    gap: 2,
   },
-  quickLogAmount: { fontSize: 16, fontFamily: Fonts.semiBold },
+  quickLogAmount: { fontSize: 18, fontFamily: Fonts.bold },
   quickLogUnit: { fontSize: 11, fontFamily: Fonts.regular },
-  customPlus: { fontSize: 20, fontFamily: Fonts.light, marginBottom: -2 },
+  customButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    minHeight: 68,
+    justifyContent: 'center',
+    gap: 2,
+  },
+  customPlus: { fontSize: 18, fontFamily: Fonts.light, marginBottom: -2 },
+  customLabel: { fontSize: 12, fontFamily: Fonts.semiBold },
 
   lastLogCard: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
     gap: 10,
   },
   logDot: { width: 6, height: 6, borderRadius: 3 },

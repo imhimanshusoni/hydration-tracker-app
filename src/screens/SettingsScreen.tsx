@@ -151,7 +151,7 @@ export function SettingsScreen() {
 
       {/* Profile card */}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>PROFILE</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Profile</Text>
 
         <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Name</Text>
         <TextInput
@@ -245,13 +245,12 @@ export function SettingsScreen() {
           ))}
         </View>
 
-        {/* Smart Goal display */}
-        <View style={[styles.goalRow, { borderTopColor: theme.border }]}>
-          <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>Smart Goal</Text>
-          <View style={[styles.goalBadge, { backgroundColor: theme.background, borderColor: theme.accent }]}>
-            <Text style={[styles.goalValue, { color: theme.accent }]}>{goalL} L</Text>
-          </View>
-        </View>
+      </View>
+
+      {/* Smart Goal — elevated as its own section */}
+      <View style={[styles.goalCard, { backgroundColor: theme.surfaceElevated }]}>
+        <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>Your daily goal</Text>
+        <Text style={[styles.goalValue, { color: theme.text }]}>{goalL} L</Text>
         <Text style={[styles.goalBreakdown, { color: theme.textSecondary }]}>
           Base {baseL}L + Weather +{weatherL}L + Activity +{activityTotalL}L
         </Text>
@@ -259,10 +258,10 @@ export function SettingsScreen() {
 
       {/* Environment card */}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ENVIRONMENT</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Environment</Text>
 
         <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Climate Preference</Text>
-        <View style={styles.pillRow}>
+        <View style={styles.pillGrid}>
           {(['cold', 'temperate', 'hot', 'tropical'] as const).map((c) => (
             <TouchableOpacity
               key={c}
@@ -286,7 +285,7 @@ export function SettingsScreen() {
 
       {/* Health card */}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>HEALTH</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Health</Text>
         <Text style={[styles.toggleDesc, { color: theme.textSecondary, marginBottom: 12 }]}>
           {healthConnected
             ? 'Tracking activity to auto-adjust your water goal'
@@ -319,7 +318,7 @@ export function SettingsScreen() {
 
       {/* Reminders card */}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>REMINDERS</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Reminders</Text>
 
         <View style={styles.toggleRow}>
           <View>
@@ -379,11 +378,6 @@ export function SettingsScreen() {
         </View>
       </View>
 
-      {/* App info */}
-      <Text style={[styles.appInfo, { color: theme.textSecondary }]}>
-        Water Reminder v1.0
-      </Text>
-
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
@@ -414,9 +408,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    letterSpacing: 1.5,
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+    letterSpacing: 0.3,
     marginBottom: 16,
   },
 
@@ -450,33 +444,26 @@ const styles = StyleSheet.create({
   },
 
   // Goal
-  goalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  goalCard: {
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 16,
     alignItems: 'center',
-    borderTopWidth: 1,
-    marginTop: 20,
-    paddingTop: 16,
   },
   goalLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: Fonts.medium,
-  },
-  goalBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
+    marginBottom: 4,
   },
   goalValue: {
-    fontSize: 15,
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.3,
+    fontSize: 36,
+    fontFamily: Fonts.light,
+    letterSpacing: -1,
   },
   goalBreakdown: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    marginTop: 8,
+    marginTop: 6,
     letterSpacing: 0.2,
   },
 
@@ -496,15 +483,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.semiBold,
   },
+  pillGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   pillSmall: {
-    flex: 1,
+    width: '48%',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
   },
   pillTextSmall: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: Fonts.semiBold,
   },
 
@@ -581,12 +573,4 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
   },
 
-  // Footer
-  appInfo: {
-    textAlign: 'center',
-    fontSize: 12,
-    fontFamily: Fonts.medium,
-    marginTop: 16,
-    letterSpacing: 0.3,
-  },
 });

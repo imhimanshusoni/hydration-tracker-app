@@ -76,7 +76,7 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
 
           {/* Custom input */}
           <View style={[styles.customCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <Text style={[styles.customLabel, { color: theme.textSecondary }]}>Custom</Text>
+            <Text style={[styles.customLabel, { color: theme.textSecondary }]}>Custom amount</Text>
             <View style={styles.customInputRow}>
               <TextInput
                 style={[styles.customInput, { color: theme.text }]}
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   presetUnit: { fontSize: 12, fontFamily: Fonts.regular, marginTop: 2 },
 
   customCard: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 20 },
-  customLabel: { fontSize: 11, fontFamily: Fonts.semiBold, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  customLabel: { fontSize: 12, fontFamily: Fonts.semiBold, letterSpacing: 0.3, marginBottom: 8 },
   customInputRow: { flexDirection: 'row', alignItems: 'baseline' },
   customInput: { fontSize: 32, fontFamily: Fonts.light, minWidth: 80 },
   customUnit: { fontSize: 16, fontFamily: Fonts.regular, marginLeft: 4 },
