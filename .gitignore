@@ -64,7 +64,7 @@ yarn-error.log
 .metro-health-check*
 
 # Secrets
-src/env.ts
+.env
 
 # testing
 /coverage

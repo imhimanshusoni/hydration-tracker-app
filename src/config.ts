@@ -1,6 +1,8 @@
 // App configuration constants
 
-export { OPENWEATHERMAP_API_KEY } from './env';
+import Config from 'react-native-config';
+
+export const OPENWEATHERMAP_API_KEY = Config.OPENWEATHERMAP_API_KEY ?? '';
 
 export const MIN_GOAL_ML = 1500;
 export const MAX_GOAL_ML = 5000;
