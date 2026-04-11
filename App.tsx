@@ -23,11 +23,11 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#00C9B8',
-        tabBarInactiveTintColor: '#8899BB',
+        tabBarActiveTintColor: '#3B9FE3',
+        tabBarInactiveTintColor: '#7A8BA8',
         tabBarStyle: {
-          backgroundColor: '#0A0F1E',
-          borderTopColor: '#1A2A4A',
+          backgroundColor: '#060B18',
+          borderTopColor: '#1B2D45',
           borderTopWidth: 1,
           paddingTop: 8,
           height: 88,
@@ -73,7 +73,7 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0F1E" />
+      <StatusBar barStyle="light-content" backgroundColor="#060B18" />
       {onboardingComplete ? (
         <NavigationContainer>
           <MainTabs />

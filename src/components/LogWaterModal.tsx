@@ -1,6 +1,5 @@
-// Premium bottom-sheet modal for logging water intake.
-// Frosted glass surface on deep navy overlay.
-// Preset quick-log buttons + custom input with range clamping.
+// Bottom-sheet modal for logging water.
+// Clean numeric presets (no emoji), custom input with range.
 
 import React, { useState } from 'react';
 import {
@@ -21,11 +20,7 @@ interface LogWaterModalProps {
   theme: AppTheme;
 }
 
-const PRESETS = [
-  { ml: 150, label: '150', icon: '💧' },
-  { ml: 250, label: '250', icon: '🥤' },
-  { ml: 500, label: '500', icon: '🫗' },
-];
+const PRESETS = [150, 250, 500];
 const MIN_CUSTOM = 50;
 const MAX_CUSTOM = 1000;
 
@@ -43,12 +38,11 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
     onClose();
   }
 
-  function handleSliderText(text: string) {
+  function handleTextChange(text: string) {
     setCustomText(text);
     const parsed = parseInt(text, 10);
     if (!isNaN(parsed)) {
-      const clamped = Math.max(MIN_CUSTOM, Math.min(MAX_CUSTOM, parsed));
-      setCustomAmount(clamped);
+      setCustomAmount(Math.max(MIN_CUSTOM, Math.min(MAX_CUSTOM, parsed)));
     }
   }
 
@@ -59,43 +53,41 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdropTap} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          {/* Drag handle */}
           <View style={[styles.handle, { backgroundColor: theme.border }]} />
 
           <Text style={[styles.title, { color: theme.text }]}>Log Water</Text>
 
-          {/* Preset buttons */}
+          {/* Presets — clean numeric buttons */}
           <View style={styles.presetRow}>
-            {PRESETS.map(({ ml, label, icon }) => (
+            {PRESETS.map((ml) => (
               <TouchableOpacity
                 key={ml}
                 style={[styles.presetButton, { backgroundColor: theme.background, borderColor: theme.border }]}
                 onPress={() => handlePreset(ml)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.presetIcon}>{icon}</Text>
-                <Text style={[styles.presetAmount, { color: theme.text }]}>{label}</Text>
+                <Text style={[styles.presetValue, { color: theme.text }]}>{ml}</Text>
                 <Text style={[styles.presetUnit, { color: theme.textSecondary }]}>ml</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Custom amount */}
-          <View style={[styles.customSection, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <Text style={[styles.customLabel, { color: theme.textSecondary }]}>Custom amount</Text>
+          {/* Custom input */}
+          <View style={[styles.customCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Text style={[styles.customLabel, { color: theme.textSecondary }]}>Custom</Text>
             <View style={styles.customInputRow}>
               <TextInput
                 style={[styles.customInput, { color: theme.text }]}
                 keyboardType="numeric"
                 value={customText}
-                onChangeText={handleSliderText}
+                onChangeText={handleTextChange}
                 onBlur={handleTextBlur}
                 maxLength={4}
                 placeholderTextColor={theme.textSecondary}
               />
-              <Text style={[styles.mlUnit, { color: theme.textSecondary }]}>ml</Text>
+              <Text style={[styles.customUnit, { color: theme.textSecondary }]}>ml</Text>
             </View>
             <View style={styles.rangeRow}>
               <Text style={[styles.rangeText, { color: theme.textSecondary }]}>{MIN_CUSTOM}</Text>
@@ -104,7 +96,6 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
             </View>
           </View>
 
-          {/* Log button */}
           <TouchableOpacity
             style={[styles.logButton, { backgroundColor: theme.accent }]}
             onPress={handleCustomLog}
@@ -123,14 +114,8 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(5, 8, 18, 0.7)',
-  },
-  backdropTap: {
-    flex: 1,
-  },
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(3, 5, 12, 0.75)' },
+  backdrop: { flex: 1 },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -138,103 +123,31 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 44,
   },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: Fonts.semiBold,
-    letterSpacing: 0.3,
-    marginBottom: 24,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
+  handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  title: { fontSize: 18, fontFamily: Fonts.semiBold, marginBottom: 24 },
+
+  presetRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   presetButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  presetIcon: {
-    fontSize: 20,
-    marginBottom: 6,
-  },
-  presetAmount: {
-    fontSize: 20,
-    fontFamily: Fonts.bold,
-  },
-  presetUnit: {
-    fontSize: 12,
-    fontFamily: Fonts.medium,
-    marginTop: 2,
-  },
-  customSection: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 20,
-  },
-  customLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.semiBold,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  customInputRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 12,
-  },
-  customInput: {
-    fontSize: 32,
-    fontFamily: Fonts.light,
-    minWidth: 80,
-  },
-  mlUnit: {
-    fontSize: 16,
-    fontFamily: Fonts.medium,
-    marginLeft: 4,
-  },
-  rangeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  rangeLine: {
-    flex: 1,
-    height: 1,
-  },
-  rangeText: {
-    fontSize: 11,
-    fontFamily: Fonts.medium,
-  },
-  logButton: {
     paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
   },
-  logButtonText: {
-    color: '#0A0F1E',
-    fontSize: 16,
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.3,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  cancelText: {
-    fontSize: 15,
-    fontFamily: Fonts.medium,
-  },
+  presetValue: { fontSize: 22, fontFamily: Fonts.semiBold },
+  presetUnit: { fontSize: 12, fontFamily: Fonts.regular, marginTop: 2 },
+
+  customCard: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 20 },
+  customLabel: { fontSize: 11, fontFamily: Fonts.semiBold, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  customInputRow: { flexDirection: 'row', alignItems: 'baseline' },
+  customInput: { fontSize: 32, fontFamily: Fonts.light, minWidth: 80 },
+  customUnit: { fontSize: 16, fontFamily: Fonts.regular, marginLeft: 4 },
+  rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  rangeLine: { flex: 1, height: 1 },
+  rangeText: { fontSize: 11, fontFamily: Fonts.regular },
+
+  logButton: { paddingVertical: 18, borderRadius: 14, alignItems: 'center', marginBottom: 12 },
+  logButtonText: { color: '#FFFFFF', fontSize: 16, fontFamily: Fonts.bold },
+  cancelButton: { alignItems: 'center', paddingVertical: 10 },
+  cancelText: { fontSize: 15, fontFamily: Fonts.medium },
 });
