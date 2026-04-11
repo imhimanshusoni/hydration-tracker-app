@@ -126,14 +126,13 @@ export function SettingsScreen() {
   const goalL = (dailyGoal / 1000).toFixed(1);
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Page title */}
+    <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <Text style={[styles.pageTitle, { color: theme.text }]}>Settings</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
 
       {/* Profile card */}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -263,8 +262,9 @@ export function SettingsScreen() {
         Water Reminder v1.0
       </Text>
 
-      <View style={{ height: 100 }} />
-    </ScrollView>
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -280,7 +280,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     letterSpacing: -0.3,
     paddingTop: 16,
-    marginBottom: 24,
+    paddingHorizontal: 24,
+    marginBottom: 16,
   },
 
   // Cards
