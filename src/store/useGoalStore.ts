@@ -11,7 +11,7 @@ import {
 } from '../utils/waterCalculator';
 import { fetchCurrentWeather } from '../utils/weatherService';
 import { getTodayActiveMinutes } from '../utils/healthService';
-import type { DailyGoalState } from '../types';
+import type { DailyGoalState, WeatherData } from '../types';
 
 interface GoalActions {
   recalculateMorningGoal: () => Promise<void>;
@@ -33,7 +33,7 @@ const INITIAL_STATE: DailyGoalState & { goalAdjustmentToast: string | null } = {
   lastWeatherCheck: null,
   weatherSource: null,
   lastActiveMinutes: 0,
-  lastTemp: null,
+  weatherData: null,
   goalAdjustmentToast: null,
 };
 
@@ -49,13 +49,13 @@ export const useGoalStore = create<GoalState>()(
         // Fetch weather (fallback to manual climate preference)
         let weatherBonus: number;
         let weatherSource: 'api' | 'manual';
-        let lastTemp: number | null = null;
+        let storedWeatherData: WeatherData | null = null;
 
         const weather = await fetchCurrentWeather();
         if (weather) {
           weatherBonus = getWeatherBonusFromTemp(weather.tempC);
           weatherSource = 'api';
-          lastTemp = weather.tempC;
+          storedWeatherData = weather;
         } else {
           weatherBonus = getWeatherBonusFromClimate(profile.climatePreference);
           weatherSource = 'manual';
@@ -84,7 +84,7 @@ export const useGoalStore = create<GoalState>()(
           lastWeatherCheck: today,
           weatherSource,
           lastActiveMinutes: activeMinutes,
-          lastTemp,
+          weatherData: storedWeatherData,
         });
 
         // Sync widget
@@ -139,7 +139,7 @@ export const useGoalStore = create<GoalState>()(
           lastWeatherCheck: null,
           weatherSource: null,
           lastActiveMinutes: 0,
-          lastTemp: null,
+          weatherData: null,
           goalAdjustmentToast: null,
         });
       },
@@ -160,7 +160,7 @@ export const useGoalStore = create<GoalState>()(
         lastWeatherCheck: state.lastWeatherCheck,
         weatherSource: state.weatherSource,
         lastActiveMinutes: state.lastActiveMinutes,
-        lastTemp: state.lastTemp,
+        weatherData: state.weatherData,
       }),
     },
   ),

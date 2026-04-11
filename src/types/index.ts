@@ -23,6 +23,15 @@ export interface UserProfile {
   dailyGoal: number; // ml
 }
 
+export interface WeatherData {
+  tempC: number;
+  feelsLikeC: number;
+  humidity: number;
+  conditionCode: number;
+  conditionMain: string;
+  description: string;
+}
+
 export interface DailyGoalState {
   baseGoal: number;
   weatherBonus: number;
@@ -32,7 +41,7 @@ export interface DailyGoalState {
   lastWeatherCheck: string | null;
   weatherSource: 'api' | 'manual' | null;
   lastActiveMinutes: number;
-  lastTemp: number | null;
+  weatherData: WeatherData | null;
 }
 
 export interface WaterDay {

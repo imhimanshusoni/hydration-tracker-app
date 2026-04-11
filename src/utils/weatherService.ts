@@ -44,7 +44,11 @@ function getCurrentPosition(): Promise<{ lat: number; lon: number } | null> {
 
 export async function fetchCurrentWeather(): Promise<{
   tempC: number;
+  feelsLikeC: number;
   humidity: number;
+  conditionCode: number;
+  conditionMain: string;
+  description: string;
 } | null> {
   try {
     const hasPermission = await requestLocationPermission();
@@ -60,7 +64,11 @@ export async function fetchCurrentWeather(): Promise<{
     const data = await response.json();
     return {
       tempC: data.main.temp,
+      feelsLikeC: data.main.feels_like,
       humidity: data.main.humidity,
+      conditionCode: data.weather[0].id,
+      conditionMain: data.weather[0].main,
+      description: data.weather[0].description,
     };
   } catch {
     return null;
