@@ -31,6 +31,6 @@ export const darkTheme: AppTheme = {
   error: '#F87171',
 };
 
-export function getTheme(colorScheme: 'light' | 'dark' | null | undefined): AppTheme {
+export function getTheme(colorScheme: string | null | undefined): AppTheme {
   return colorScheme === 'dark' ? darkTheme : lightTheme;
 }
