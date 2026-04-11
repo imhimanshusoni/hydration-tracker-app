@@ -1,6 +1,6 @@
 // App configuration constants
 
-export const OPENWEATHERMAP_API_KEY = 'REMOVED_SECRET';
+export { OPENWEATHERMAP_API_KEY } from './env';
 
 export const MIN_GOAL_ML = 1500;
 export const MAX_GOAL_ML = 5000;
