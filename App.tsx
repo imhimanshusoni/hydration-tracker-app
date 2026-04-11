@@ -13,6 +13,7 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { useUserStore } from './src/store/useUserStore';
 import { useWaterStore } from './src/store/useWaterStore';
 import { scheduleReminders } from './src/utils/notificationScheduler';
+import { HomeIcon, SettingsIcon } from './src/components/TabIcons';
 
 const Tab = createBottomTabNavigator();
 
@@ -40,12 +41,18 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'Home' }}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => <HomeIcon color={color} size={size} />,
+        }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ tabBarLabel: 'Settings' }}
+        options={{
+          tabBarLabel: 'Settings',
+          tabBarIcon: ({ color, size }) => <SettingsIcon color={color} size={size} />,
+        }}
       />
     </Tab.Navigator>
   );
