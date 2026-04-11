@@ -4,7 +4,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
-import { useUserStore } from './useUserStore';
 import type { WaterDay } from '../types';
 
 function getTodayDate(): string {
@@ -36,8 +35,9 @@ export const useWaterStore = create<WaterState>()(
           lastLoggedAt: now,
           lastLogAmount: amount,
         });
-        const { dailyGoal } = useUserStore.getState();
-        writeWidgetData(dailyGoal, newConsumed, now);
+        const { useGoalStore } = require('./useGoalStore');
+        const { effectiveGoal } = useGoalStore.getState();
+        writeWidgetData(effectiveGoal, newConsumed, now);
       },
 
       undoLastLog: () => {
@@ -49,8 +49,9 @@ export const useWaterStore = create<WaterState>()(
           lastLogAmount: null,
           lastLoggedAt: null,
         });
-        const { dailyGoal } = useUserStore.getState();
-        writeWidgetData(dailyGoal, newConsumed, null);
+        const { useGoalStore } = require('./useGoalStore');
+        const { effectiveGoal } = useGoalStore.getState();
+        writeWidgetData(effectiveGoal, newConsumed, null);
       },
 
       checkMidnightReset: () => {
@@ -62,8 +63,12 @@ export const useWaterStore = create<WaterState>()(
             lastLogAmount: null,
             date: today,
           });
-          const { dailyGoal } = useUserStore.getState();
-          writeWidgetData(dailyGoal, 0, null);
+          // Reset and recalculate the smart goal for the new day.
+          // recalculateMorningGoal handles widget data write after async completion.
+          const { useGoalStore } = require('./useGoalStore');
+          const goalStore = useGoalStore.getState();
+          goalStore.resetDaily();
+          goalStore.recalculateMorningGoal();
         }
       },
     }),

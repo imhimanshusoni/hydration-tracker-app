@@ -33,8 +33,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>WaterReminder reads your exercise data to adjust your daily water goal based on activity.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string/>
+	<string>WaterReminder uses your location to check local weather and adjust your hydration goal.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

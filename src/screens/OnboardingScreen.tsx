@@ -15,8 +15,9 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
-import type { TimeOfDay } from '../types';
+import type { TimeOfDay, Gender, ActivityLevel } from '../types';
 import { requestNotificationPermission } from '../utils/notificationScheduler';
+import { requestHealthPermissions } from '../utils/healthService';
 import { Fonts } from '../fonts';
 
 function timeToString(t: TimeOfDay): string {
@@ -31,6 +32,8 @@ export function OnboardingScreen() {
   const [name, setName] = useState('');
   const [weightText, setWeightText] = useState('');
   const [ageText, setAgeText] = useState('');
+  const [gender, setGender] = useState<Gender>('other');
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
   const [wakeUpTime, setWakeUpTime] = useState<TimeOfDay>({ hour: 7, minute: 0 });
   const [sleepTime, setSleepTime] = useState<TimeOfDay>({ hour: 23, minute: 0 });
   const [showWakePicker, setShowWakePicker] = useState(false);
@@ -61,10 +64,15 @@ export function OnboardingScreen() {
       name: name.trim(),
       weight,
       age,
+      gender,
+      activityLevel,
+      climatePreference: 'temperate',
       wakeUpTime,
       sleepTime,
     });
-  }, [isValid, name, weight, age, wakeUpTime, sleepTime, completeOnboarding]);
+    // Fire-and-forget health permissions request
+    requestHealthPermissions();
+  }, [isValid, name, weight, age, gender, activityLevel, wakeUpTime, sleepTime, completeOnboarding]);
 
   function handleWakeTimeChange(_event: DateTimePickerEvent, date?: Date) {
     setShowWakePicker(Platform.OS === 'ios');
@@ -130,6 +138,73 @@ export function OnboardingScreen() {
         keyboardType="numeric"
       />
       {ageError && <Text style={[styles.errorText, { color: theme.error }]}>{ageError}</Text>}
+
+      {/* Gender */}
+      <Text style={[styles.label, { color: theme.text }]}>Gender</Text>
+      <View style={styles.pillRow}>
+        {(['male', 'female', 'other'] as const).map((g) => (
+          <TouchableOpacity
+            key={g}
+            style={[
+              styles.pill,
+              {
+                backgroundColor: gender === g ? theme.accent : theme.surface,
+                borderColor: gender === g ? theme.accent : theme.border,
+              },
+            ]}
+            onPress={() => setGender(g)}
+          >
+            <Text
+              style={[
+                styles.pillText,
+                { color: gender === g ? '#FFFFFF' : theme.text },
+              ]}
+            >
+              {g.charAt(0).toUpperCase() + g.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Activity Level */}
+      <Text style={[styles.label, { color: theme.text }]}>Activity Level</Text>
+      <View style={styles.pillRow}>
+        {([
+          { key: 'sedentary' as const, desc: 'Desk job, little exercise' },
+          { key: 'moderate' as const, desc: 'Some regular exercise' },
+          { key: 'active' as const, desc: 'Daily intense exercise' },
+        ]).map(({ key, desc }) => (
+          <TouchableOpacity
+            key={key}
+            style={[
+              styles.pill,
+              styles.activityPill,
+              {
+                backgroundColor: activityLevel === key ? theme.accent : theme.surface,
+                borderColor: activityLevel === key ? theme.accent : theme.border,
+              },
+            ]}
+            onPress={() => setActivityLevel(key)}
+          >
+            <Text
+              style={[
+                styles.pillText,
+                { color: activityLevel === key ? '#FFFFFF' : theme.text },
+              ]}
+            >
+              {key.charAt(0).toUpperCase() + key.slice(1)}
+            </Text>
+            <Text
+              style={[
+                styles.pillDesc,
+                { color: activityLevel === key ? 'rgba(255,255,255,0.7)' : theme.textSecondary },
+              ]}
+            >
+              {desc}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* Wake-up time */}
       <Text style={[styles.label, { color: theme.text }]}>Wake-up time</Text>
@@ -202,6 +277,31 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   errorText: { fontSize: 12, fontFamily: Fonts.medium, marginTop: 4 },
+  pillRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  activityPill: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  pillText: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+  },
+  pillDesc: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    marginTop: 2,
+    textAlign: 'center',
+  },
   submitButton: {
     marginTop: 32,
     paddingVertical: 16,

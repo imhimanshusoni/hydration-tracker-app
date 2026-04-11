@@ -12,6 +12,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { useUserStore } from './src/store/useUserStore';
 import { useWaterStore } from './src/store/useWaterStore';
+import { useGoalStore } from './src/store/useGoalStore';
 import { scheduleReminders } from './src/utils/notificationScheduler';
 import { HomeIcon, SettingsIcon } from './src/components/TabIcons';
 import { Fonts } from './src/fonts';
@@ -62,12 +63,16 @@ function MainTabs() {
 function App() {
   const onboardingComplete = useUserStore((s) => s.onboardingComplete);
 
-  // Schedule initial notifications on app start (if onboarded)
+  // Schedule initial notifications and recalculate smart goal on app start
   useEffect(() => {
     if (onboardingComplete) {
-      const { wakeUpTime, sleepTime, dailyGoal, remindersEnabled } = useUserStore.getState();
+      const { wakeUpTime, sleepTime, remindersEnabled } = useUserStore.getState();
       const { consumed } = useWaterStore.getState();
-      scheduleReminders(wakeUpTime, sleepTime, consumed, dailyGoal, remindersEnabled);
+      // Recalculate smart goal for today (weather + activity)
+      useGoalStore.getState().recalculateMorningGoal().then(() => {
+        const { effectiveGoal } = useGoalStore.getState();
+        scheduleReminders(wakeUpTime, sleepTime, consumed, effectiveGoal, remindersEnabled);
+      });
     }
   }, [onboardingComplete]);
 

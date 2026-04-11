@@ -49,6 +49,36 @@ jest.mock('@react-native-community/datetimepicker', () => {
   return MockPicker;
 });
 
+jest.mock('react-native-geolocation-service', () => ({
+  __esModule: true,
+  default: {
+    getCurrentPosition: jest.fn(),
+    requestAuthorization: jest.fn().mockResolvedValue('granted'),
+  },
+}));
+
+jest.mock('react-native-health', () => ({
+  __esModule: true,
+  default: {
+    initHealthKit: jest.fn((_perms: unknown, cb: (err: string | null) => void) => cb(null)),
+    getAppleExerciseTime: jest.fn((_opts: unknown, cb: (err: object | null, results: Array<{value: number}>) => void) => cb(null, [])),
+    Constants: {
+      Permissions: {
+        ActiveEnergyBurned: 'ActiveEnergyBurned',
+        AppleExerciseTime: 'AppleExerciseTime',
+      },
+    },
+  },
+}));
+
+jest.mock('react-native-health-connect', () => ({
+  initialize: jest.fn().mockResolvedValue(true),
+  getSdkStatus: jest.fn().mockResolvedValue(1),
+  requestPermission: jest.fn().mockResolvedValue([]),
+  readRecords: jest.fn().mockResolvedValue({ records: [] }),
+  SdkAvailabilityStatus: { SDK_AVAILABLE: 1, SDK_UNAVAILABLE: 2 },
+}));
+
 test('renders correctly', async () => {
   await ReactTestRenderer.act(() => {
     ReactTestRenderer.create(<App />);

@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
 
     <application
       android:name=".MainApplication"
@@ -21,6 +24,13 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity>
+      <activity
+        android:name="androidx.health.connect.client.permission.HealthConnectRequestPermissionsActivity"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="androidx.health.connect.action.REQUEST_PERMISSIONS" />
         </intent-filter>
       </activity>
     </application>

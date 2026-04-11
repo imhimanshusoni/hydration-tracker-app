@@ -24,9 +24,11 @@ import Svg, { Path } from 'react-native-svg';
 import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
+import { useGoalStore } from '../store/useGoalStore';
 import { WaterProgressBar } from '../components/WaterProgressBar';
 import { LogWaterModal } from '../components/LogWaterModal';
 import { scheduleReminders } from '../utils/notificationScheduler';
+import { getTodayActiveMinutes } from '../utils/healthService';
 import { Fonts } from '../fonts';
 
 const QUICK_LOG = [150, 250, 500];
@@ -81,10 +83,13 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const name = useUserStore((s) => s.name);
-  const dailyGoal = useUserStore((s) => s.dailyGoal);
   const wakeUpTime = useUserStore((s) => s.wakeUpTime);
   const sleepTime = useUserStore((s) => s.sleepTime);
   const remindersEnabled = useUserStore((s) => s.remindersEnabled);
+
+  const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
+  const goalAdjustmentToast = useGoalStore((s) => s.goalAdjustmentToast);
+  const clearToast = useGoalStore((s) => s.clearToast);
 
   const consumed = useWaterStore((s) => s.consumed);
   const lastLogAmount = useWaterStore((s) => s.lastLogAmount);
@@ -95,40 +100,70 @@ export function HomeScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
+  const [showGoalToast, setShowGoalToast] = useState(false);
   const undoOpacity = useRef(new Animated.Value(0)).current;
+  const goalToastOpacity = useRef(new Animated.Value(0)).current;
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const goalToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const progress = dailyGoal > 0 ? consumed / dailyGoal : 0;
+  const progress = effectiveGoal > 0 ? consumed / effectiveGoal : 0;
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         checkMidnightReset();
+        const currentGoal = useGoalStore.getState().effectiveGoal;
         scheduleReminders(
           wakeUpTime, sleepTime,
           useWaterStore.getState().consumed,
-          dailyGoal, remindersEnabled,
+          currentGoal, remindersEnabled,
         );
+        // Check for activity bumps
+        getTodayActiveMinutes().then((minutes) => {
+          useGoalStore.getState().applyActivityBump(minutes);
+        });
       }
     });
     return () => sub.remove();
-  }, [checkMidnightReset, wakeUpTime, sleepTime, dailyGoal, remindersEnabled]);
+  }, [checkMidnightReset, wakeUpTime, sleepTime, remindersEnabled]);
 
-  useEffect(() => { checkMidnightReset(); }, [checkMidnightReset]);
+  useEffect(() => {
+    checkMidnightReset();
+    // Initial activity check on mount
+    getTodayActiveMinutes().then((minutes) => {
+      useGoalStore.getState().applyActivityBump(minutes);
+    });
+  }, [checkMidnightReset]);
+
+  // Goal adjustment toast
+  useEffect(() => {
+    if (goalAdjustmentToast) {
+      if (goalToastTimer.current) clearTimeout(goalToastTimer.current);
+      setShowGoalToast(true);
+      Animated.timing(goalToastOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+      goalToastTimer.current = setTimeout(() => {
+        Animated.timing(goalToastOpacity, { toValue: 0, duration: 250, useNativeDriver: true })
+          .start(() => {
+            setShowGoalToast(false);
+            clearToast();
+          });
+      }, 4000);
+    }
+  }, [goalAdjustmentToast, goalToastOpacity, clearToast]);
 
   const handleQuickLog = useCallback((amount: number) => {
     logWater(amount);
     const newConsumed = consumed + amount;
-    scheduleReminders(wakeUpTime, sleepTime, newConsumed, dailyGoal, remindersEnabled);
+    scheduleReminders(wakeUpTime, sleepTime, newConsumed, effectiveGoal, remindersEnabled);
     showUndoToast();
-  }, [consumed, logWater, wakeUpTime, sleepTime, dailyGoal, remindersEnabled]);
+  }, [consumed, logWater, wakeUpTime, sleepTime, effectiveGoal, remindersEnabled]);
 
   const handleModalLog = useCallback((amount: number) => {
     logWater(amount);
     const newConsumed = consumed + amount;
-    scheduleReminders(wakeUpTime, sleepTime, newConsumed, dailyGoal, remindersEnabled);
+    scheduleReminders(wakeUpTime, sleepTime, newConsumed, effectiveGoal, remindersEnabled);
     showUndoToast();
-  }, [consumed, logWater, wakeUpTime, sleepTime, dailyGoal, remindersEnabled]);
+  }, [consumed, logWater, wakeUpTime, sleepTime, effectiveGoal, remindersEnabled]);
 
   function showUndoToast() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -146,8 +181,8 @@ export function HomeScreen() {
     setShowUndo(false);
     undoOpacity.setValue(0);
     const reverted = useWaterStore.getState().consumed;
-    scheduleReminders(wakeUpTime, sleepTime, reverted, dailyGoal, remindersEnabled);
-  }, [undoLastLog, wakeUpTime, sleepTime, dailyGoal, remindersEnabled, undoOpacity]);
+    scheduleReminders(wakeUpTime, sleepTime, reverted, effectiveGoal, remindersEnabled);
+  }, [undoLastLog, wakeUpTime, sleepTime, effectiveGoal, remindersEnabled, undoOpacity]);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
@@ -163,7 +198,7 @@ export function HomeScreen() {
 
         {/* Hero progress ring with water fill */}
         <View style={styles.ringSection}>
-          <WaterProgressBar consumed={consumed} dailyGoal={dailyGoal} theme={theme} />
+          <WaterProgressBar consumed={consumed} dailyGoal={effectiveGoal} theme={theme} />
         </View>
 
         {/* Motivational text below ring */}
@@ -233,6 +268,21 @@ export function HomeScreen() {
           <TouchableOpacity onPress={handleUndo} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Text style={[styles.undoAction, { color: theme.accent }]}>Undo</Text>
           </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* Goal adjustment toast */}
+      {showGoalToast && goalAdjustmentToast && (
+        <Animated.View
+          style={[
+            styles.undoToast,
+            { backgroundColor: theme.surface, borderColor: theme.accentWarm, opacity: goalToastOpacity, bottom: (showUndo ? 156 : 100) + insets.bottom },
+          ]}
+        >
+          <View style={[styles.undoBar, { backgroundColor: theme.accentWarm }]} />
+          <Text style={[styles.undoText, { color: theme.text }]}>
+            {goalAdjustmentToast}
+          </Text>
         </Animated.View>
       )}
     </View>

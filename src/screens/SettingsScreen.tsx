@@ -25,8 +25,9 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { getTheme } from '../theme';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
+import { useGoalStore } from '../store/useGoalStore';
 import { scheduleReminders, cancelAllReminders } from '../utils/notificationScheduler';
-import type { TimeOfDay } from '../types';
+import type { TimeOfDay, Gender, ActivityLevel, ClimatePreference } from '../types';
 import { Fonts } from '../fonts';
 
 function timeToString(t: TimeOfDay): string {
@@ -40,13 +41,23 @@ export function SettingsScreen() {
   const name = useUserStore((s) => s.name);
   const weight = useUserStore((s) => s.weight);
   const age = useUserStore((s) => s.age);
+  const gender = useUserStore((s) => s.gender);
+  const activityLevel = useUserStore((s) => s.activityLevel);
+  const climatePreference = useUserStore((s) => s.climatePreference);
   const wakeUpTime = useUserStore((s) => s.wakeUpTime);
   const sleepTime = useUserStore((s) => s.sleepTime);
   const remindersEnabled = useUserStore((s) => s.remindersEnabled);
-  const dailyGoal = useUserStore((s) => s.dailyGoal);
   const updateProfile = useUserStore((s) => s.updateProfile);
   const updateSchedule = useUserStore((s) => s.updateSchedule);
   const setRemindersEnabled = useUserStore((s) => s.setRemindersEnabled);
+
+  const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
+  const baseGoal = useGoalStore((s) => s.baseGoal);
+  const weatherBonus = useGoalStore((s) => s.weatherBonus);
+  const activityBonus = useGoalStore((s) => s.activityBonus);
+  const activityBump = useGoalStore((s) => s.activityBump);
+  const weatherSource = useGoalStore((s) => s.weatherSource);
+  const lastTemp = useGoalStore((s) => s.lastTemp);
 
   const consumed = useWaterStore((s) => s.consumed);
 
@@ -77,25 +88,21 @@ export function SettingsScreen() {
   const handleWeightBlur = useCallback(() => {
     if (!isNaN(parsedWeight) && parsedWeight >= 30 && parsedWeight <= 200 && parsedWeight !== weight) {
       updateProfile({ weight: parsedWeight });
-      const newGoal = useUserStore.getState().dailyGoal;
-      scheduleReminders(wakeUpTime, sleepTime, consumed, newGoal, remindersEnabled);
     }
-  }, [parsedWeight, weight, updateProfile, wakeUpTime, sleepTime, consumed, remindersEnabled]);
+  }, [parsedWeight, weight, updateProfile]);
 
   const handleAgeBlur = useCallback(() => {
     if (!isNaN(parsedAge) && parsedAge >= 12 && parsedAge <= 100 && parsedAge !== age) {
       updateProfile({ age: parsedAge });
-      const newGoal = useUserStore.getState().dailyGoal;
-      scheduleReminders(wakeUpTime, sleepTime, consumed, newGoal, remindersEnabled);
     }
-  }, [parsedAge, age, updateProfile, wakeUpTime, sleepTime, consumed, remindersEnabled]);
+  }, [parsedAge, age, updateProfile]);
 
   function handleWakeTimeChange(_event: DateTimePickerEvent, date?: Date) {
     setShowWakePicker(Platform.OS === 'ios');
     if (date) {
       const newWake: TimeOfDay = { hour: date.getHours(), minute: date.getMinutes() };
       updateSchedule({ wakeUpTime: newWake });
-      scheduleReminders(newWake, sleepTime, consumed, dailyGoal, remindersEnabled);
+      scheduleReminders(newWake, sleepTime, consumed, effectiveGoal, remindersEnabled);
     }
   }
 
@@ -104,14 +111,14 @@ export function SettingsScreen() {
     if (date) {
       const newSleep: TimeOfDay = { hour: date.getHours(), minute: date.getMinutes() };
       updateSchedule({ sleepTime: newSleep });
-      scheduleReminders(wakeUpTime, newSleep, consumed, dailyGoal, remindersEnabled);
+      scheduleReminders(wakeUpTime, newSleep, consumed, effectiveGoal, remindersEnabled);
     }
   }
 
   function handleReminderToggle(value: boolean) {
     setRemindersEnabled(value);
     if (value) {
-      scheduleReminders(wakeUpTime, sleepTime, consumed, dailyGoal, true);
+      scheduleReminders(wakeUpTime, sleepTime, consumed, effectiveGoal, true);
     } else {
       cancelAllReminders();
     }
@@ -123,7 +130,10 @@ export function SettingsScreen() {
     return d;
   }
 
-  const goalL = (dailyGoal / 1000).toFixed(1);
+  const goalL = (effectiveGoal / 1000).toFixed(1);
+  const baseL = (baseGoal / 1000).toFixed(1);
+  const weatherL = (weatherBonus / 1000).toFixed(1);
+  const activityTotalL = ((activityBonus + activityBump) / 1000).toFixed(1);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
@@ -186,12 +196,94 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        {/* Goal display */}
+        {/* Gender */}
+        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Gender</Text>
+        <View style={styles.pillRow}>
+          {(['male', 'female', 'other'] as const).map((g) => (
+            <TouchableOpacity
+              key={g}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: gender === g ? theme.accent : theme.background,
+                  borderColor: gender === g ? theme.accent : theme.border,
+                },
+              ]}
+              onPress={() => updateProfile({ gender: g })}
+            >
+              <Text style={[styles.pillText, { color: gender === g ? '#FFFFFF' : theme.text }]}>
+                {g.charAt(0).toUpperCase() + g.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Activity Level */}
+        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Activity Level</Text>
+        <View style={styles.pillRow}>
+          {(['sedentary', 'moderate', 'active'] as const).map((a) => (
+            <TouchableOpacity
+              key={a}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: activityLevel === a ? theme.accent : theme.background,
+                  borderColor: activityLevel === a ? theme.accent : theme.border,
+                },
+              ]}
+              onPress={() => updateProfile({ activityLevel: a })}
+            >
+              <Text style={[styles.pillText, { color: activityLevel === a ? '#FFFFFF' : theme.text }]}>
+                {a.charAt(0).toUpperCase() + a.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Smart Goal display */}
         <View style={[styles.goalRow, { borderTopColor: theme.border }]}>
-          <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>Daily goal</Text>
+          <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>Smart Goal</Text>
           <View style={[styles.goalBadge, { backgroundColor: theme.background, borderColor: theme.accent }]}>
             <Text style={[styles.goalValue, { color: theme.accent }]}>{goalL} L</Text>
           </View>
+        </View>
+        <Text style={[styles.goalBreakdown, { color: theme.textSecondary }]}>
+          Base {baseL}L + Weather +{weatherL}L + Activity +{activityTotalL}L
+        </Text>
+      </View>
+
+      {/* Environment card */}
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ENVIRONMENT</Text>
+
+        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Climate Preference</Text>
+        <View style={styles.pillRow}>
+          {(['cold', 'temperate', 'hot', 'tropical'] as const).map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[
+                styles.pillSmall,
+                {
+                  backgroundColor: climatePreference === c ? theme.accent : theme.background,
+                  borderColor: climatePreference === c ? theme.accent : theme.border,
+                },
+              ]}
+              onPress={() => updateProfile({ climatePreference: c })}
+            >
+              <Text style={[styles.pillTextSmall, { color: climatePreference === c ? '#FFFFFF' : theme.text }]}>
+                {c.charAt(0).toUpperCase() + c.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={[styles.weatherRow, { borderTopColor: theme.border }]}>
+          <Text style={[styles.weatherLabel, { color: theme.textSecondary }]}>Today's weather</Text>
+          <Text style={[styles.weatherValue, { color: theme.text }]}>
+            {weatherSource === 'api' && lastTemp !== null
+              ? `Auto (${Math.round(lastTemp)}°C)`
+              : `Manual (${climatePreference.charAt(0).toUpperCase() + climatePreference.slice(1)})`}
+          </Text>
         </View>
       </View>
 
@@ -350,6 +442,58 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.bold,
     letterSpacing: 0.3,
+  },
+  goalBreakdown: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    marginTop: 8,
+    letterSpacing: 0.2,
+  },
+
+  // Pills
+  pillRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  pillText: {
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+  },
+  pillSmall: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  pillTextSmall: {
+    fontSize: 11,
+    fontFamily: Fonts.semiBold,
+  },
+
+  // Weather
+  weatherRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    marginTop: 16,
+    paddingTop: 12,
+  },
+  weatherLabel: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+  },
+  weatherValue: {
+    fontSize: 13,
+    fontFamily: Fonts.medium,
   },
 
   // Toggle

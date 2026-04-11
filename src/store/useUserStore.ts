@@ -5,11 +5,18 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
 import { calculateDailyGoal } from '../utils/waterCalculator';
-import type { TimeOfDay, UserProfile } from '../types';
+import type { TimeOfDay, UserProfile, Gender, ActivityLevel, ClimatePreference } from '../types';
 
 interface UserActions {
   completeOnboarding: (profile: Omit<UserProfile, 'onboardingComplete' | 'dailyGoal' | 'remindersEnabled'>) => void;
-  updateProfile: (updates: { name?: string; weight?: number; age?: number }) => void;
+  updateProfile: (updates: {
+    name?: string;
+    weight?: number;
+    age?: number;
+    gender?: Gender;
+    activityLevel?: ActivityLevel;
+    climatePreference?: ClimatePreference;
+  }) => void;
   updateSchedule: (updates: { wakeUpTime?: TimeOfDay; sleepTime?: TimeOfDay }) => void;
   setRemindersEnabled: (enabled: boolean) => void;
 }
@@ -25,6 +32,9 @@ export const useUserStore = create<UserState>()(
       name: '',
       weight: 70,
       age: 25,
+      gender: 'other' as Gender,
+      activityLevel: 'moderate' as ActivityLevel,
+      climatePreference: 'temperate' as ClimatePreference,
       wakeUpTime: DEFAULT_WAKE,
       sleepTime: DEFAULT_SLEEP,
       remindersEnabled: true,
@@ -41,6 +51,9 @@ export const useUserStore = create<UserState>()(
         });
         // Write widget data with fresh goal, 0 consumed
         writeWidgetData(goal, 0, null);
+        // Trigger smart goal recalculation
+        const { useGoalStore } = require('./useGoalStore');
+        useGoalStore.getState().recalculateMorningGoal();
       },
 
       updateProfile: (updates) => {
@@ -49,10 +62,9 @@ export const useUserStore = create<UserState>()(
         const age = updates.age ?? current.age;
         const goal = calculateDailyGoal(weight, age);
         set({ ...updates, dailyGoal: goal });
-        // Update widget goal — read consumed from water store (canonical source)
-        const { useWaterStore } = require('./useWaterStore');
-        const { consumed, lastLoggedAt } = useWaterStore.getState();
-        writeWidgetData(goal, consumed, lastLoggedAt);
+        // Trigger smart goal recalculation (handles widget data after async completion)
+        const { useGoalStore } = require('./useGoalStore');
+        useGoalStore.getState().recalculateMorningGoal();
       },
 
       updateSchedule: (updates) => {
@@ -70,6 +82,9 @@ export const useUserStore = create<UserState>()(
         name: state.name,
         weight: state.weight,
         age: state.age,
+        gender: state.gender,
+        activityLevel: state.activityLevel,
+        climatePreference: state.climatePreference,
         wakeUpTime: state.wakeUpTime,
         sleepTime: state.sleepTime,
         remindersEnabled: state.remindersEnabled,
