@@ -9,56 +9,73 @@
 // - Time buttons show time in a monospaced style for precision feel
 // - All touch targets 48pt+ for iOS HIG compliance
 
-import React, { useState, useCallback, useEffect } from 'react';
+import type {
+  ActivityLevel,
+  ClimatePreference,
+  Gender,
+  TimeOfDay,
+} from '../types';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import {
-  View,
-  Text,
-  TextInput,
-  Switch,
-  TouchableOpacity,
+  Platform,
   ScrollView,
   StyleSheet,
-  Platform,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  cancelAllReminders,
+  scheduleReminders,
+} from '../utils/notificationScheduler';
+import {
+  checkHealthPermissions,
+  requestHealthPermissions,
+} from '../utils/healthService';
+
+import { Fonts } from '../fonts';
 import { getTheme } from '../theme';
+import { useGoalStore } from '../store/useGoalStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
-import { useGoalStore } from '../store/useGoalStore';
-import { scheduleReminders, cancelAllReminders } from '../utils/notificationScheduler';
-import { requestHealthPermissions, checkHealthPermissions } from '../utils/healthService';
-import type { TimeOfDay, Gender, ActivityLevel, ClimatePreference } from '../types';
-import { Fonts } from '../fonts';
 
 function timeToString(t: TimeOfDay): string {
-  return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+  return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(
+    2,
+    '0',
+  )}`;
 }
 
 export function SettingsScreen() {
   const theme = getTheme(null);
   const insets = useSafeAreaInsets();
 
-  const name = useUserStore((s) => s.name);
-  const weight = useUserStore((s) => s.weight);
-  const age = useUserStore((s) => s.age);
-  const gender = useUserStore((s) => s.gender);
-  const activityLevel = useUserStore((s) => s.activityLevel);
-  const climatePreference = useUserStore((s) => s.climatePreference);
-  const wakeUpTime = useUserStore((s) => s.wakeUpTime);
-  const sleepTime = useUserStore((s) => s.sleepTime);
-  const remindersEnabled = useUserStore((s) => s.remindersEnabled);
-  const updateProfile = useUserStore((s) => s.updateProfile);
-  const updateSchedule = useUserStore((s) => s.updateSchedule);
-  const setRemindersEnabled = useUserStore((s) => s.setRemindersEnabled);
+  const name = useUserStore(s => s.name);
+  const weight = useUserStore(s => s.weight);
+  const age = useUserStore(s => s.age);
+  const gender = useUserStore(s => s.gender);
+  const activityLevel = useUserStore(s => s.activityLevel);
+  const climatePreference = useUserStore(s => s.climatePreference);
+  const wakeUpTime = useUserStore(s => s.wakeUpTime);
+  const sleepTime = useUserStore(s => s.sleepTime);
+  const remindersEnabled = useUserStore(s => s.remindersEnabled);
+  const updateProfile = useUserStore(s => s.updateProfile);
+  const updateSchedule = useUserStore(s => s.updateSchedule);
+  const setRemindersEnabled = useUserStore(s => s.setRemindersEnabled);
 
-  const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
-  const baseGoal = useGoalStore((s) => s.baseGoal);
-  const weatherBonus = useGoalStore((s) => s.weatherBonus);
-  const activityBonus = useGoalStore((s) => s.activityBonus);
-  const activityBump = useGoalStore((s) => s.activityBump);
+  const effectiveGoal = useGoalStore(s => s.effectiveGoal);
+  const baseGoal = useGoalStore(s => s.baseGoal);
+  const weatherBonus = useGoalStore(s => s.weatherBonus);
+  const activityBonus = useGoalStore(s => s.activityBonus);
+  const activityBump = useGoalStore(s => s.activityBump);
 
-  const consumed = useWaterStore((s) => s.consumed);
+  const consumed = useWaterStore(s => s.consumed);
 
   const [nameText, setNameText] = useState(name);
   const [weightText, setWeightText] = useState(String(weight));
@@ -75,7 +92,8 @@ export function SettingsScreen() {
   const parsedWeight = parseInt(weightText, 10);
   const parsedAge = parseInt(ageText, 10);
   const weightError =
-    weightText && (isNaN(parsedWeight) || parsedWeight < 30 || parsedWeight > 200)
+    weightText &&
+    (isNaN(parsedWeight) || parsedWeight < 30 || parsedWeight > 200)
       ? 'Weight must be 30\u2013200 kg'
       : null;
   const ageError =
@@ -91,13 +109,23 @@ export function SettingsScreen() {
   }, [nameText, name, updateProfile]);
 
   const handleWeightBlur = useCallback(() => {
-    if (!isNaN(parsedWeight) && parsedWeight >= 30 && parsedWeight <= 200 && parsedWeight !== weight) {
+    if (
+      !isNaN(parsedWeight) &&
+      parsedWeight >= 30 &&
+      parsedWeight <= 200 &&
+      parsedWeight !== weight
+    ) {
       updateProfile({ weight: parsedWeight });
     }
   }, [parsedWeight, weight, updateProfile]);
 
   const handleAgeBlur = useCallback(() => {
-    if (!isNaN(parsedAge) && parsedAge >= 12 && parsedAge <= 100 && parsedAge !== age) {
+    if (
+      !isNaN(parsedAge) &&
+      parsedAge >= 12 &&
+      parsedAge <= 100 &&
+      parsedAge !== age
+    ) {
       updateProfile({ age: parsedAge });
     }
   }, [parsedAge, age, updateProfile]);
@@ -105,18 +133,36 @@ export function SettingsScreen() {
   function handleWakeTimeChange(_event: DateTimePickerEvent, date?: Date) {
     setShowWakePicker(Platform.OS === 'ios');
     if (date) {
-      const newWake: TimeOfDay = { hour: date.getHours(), minute: date.getMinutes() };
+      const newWake: TimeOfDay = {
+        hour: date.getHours(),
+        minute: date.getMinutes(),
+      };
       updateSchedule({ wakeUpTime: newWake });
-      scheduleReminders(newWake, sleepTime, consumed, effectiveGoal, remindersEnabled);
+      scheduleReminders(
+        newWake,
+        sleepTime,
+        consumed,
+        effectiveGoal,
+        remindersEnabled,
+      );
     }
   }
 
   function handleSleepTimeChange(_event: DateTimePickerEvent, date?: Date) {
     setShowSleepPicker(Platform.OS === 'ios');
     if (date) {
-      const newSleep: TimeOfDay = { hour: date.getHours(), minute: date.getMinutes() };
+      const newSleep: TimeOfDay = {
+        hour: date.getHours(),
+        minute: date.getMinutes(),
+      };
       updateSchedule({ sleepTime: newSleep });
-      scheduleReminders(wakeUpTime, newSleep, consumed, effectiveGoal, remindersEnabled);
+      scheduleReminders(
+        wakeUpTime,
+        newSleep,
+        consumed,
+        effectiveGoal,
+        remindersEnabled,
+      );
     }
   }
 
@@ -141,244 +187,365 @@ export function SettingsScreen() {
   const activityTotalL = ((activityBonus + activityBump) / 1000).toFixed(1);
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.screen,
+        { backgroundColor: theme.background, paddingTop: insets.top },
+      ]}
+    >
       <Text style={[styles.pageTitle, { color: theme.text }]}>Settings</Text>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Profile card */}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+            Profile
+          </Text>
 
-      {/* Profile card */}
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Profile</Text>
-
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Name</Text>
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
-          value={nameText}
-          onChangeText={setNameText}
-          onBlur={handleNameBlur}
-          placeholderTextColor={theme.textSecondary}
-        />
-
-        <View style={styles.fieldRow}>
-          <View style={styles.fieldHalf}>
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Weight (kg)</Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: theme.text,
-                  backgroundColor: theme.background,
-                  borderColor: weightError ? theme.error : theme.border,
-                },
-              ]}
-              value={weightText}
-              onChangeText={setWeightText}
-              onBlur={handleWeightBlur}
-              keyboardType="numeric"
-            />
-            {weightError && <Text style={[styles.errorText, { color: theme.error }]}>{weightError}</Text>}
-          </View>
-          <View style={styles.fieldHalf}>
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Age</Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: theme.text,
-                  backgroundColor: theme.background,
-                  borderColor: ageError ? theme.error : theme.border,
-                },
-              ]}
-              value={ageText}
-              onChangeText={setAgeText}
-              onBlur={handleAgeBlur}
-              keyboardType="numeric"
-            />
-            {ageError && <Text style={[styles.errorText, { color: theme.error }]}>{ageError}</Text>}
-          </View>
-        </View>
-
-        {/* Gender */}
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Gender</Text>
-        <View style={styles.pillRow}>
-          {(['male', 'female', 'other'] as const).map((g) => (
-            <TouchableOpacity
-              key={g}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: gender === g ? theme.accent : theme.background,
-                  borderColor: gender === g ? theme.accent : theme.border,
-                },
-              ]}
-              onPress={() => updateProfile({ gender: g })}
-            >
-              <Text style={[styles.pillText, { color: gender === g ? '#FFFFFF' : theme.text }]}>
-                {g.charAt(0).toUpperCase() + g.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Activity Level */}
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Activity Level</Text>
-        <View style={styles.pillRow}>
-          {(['sedentary', 'moderate', 'active'] as const).map((a) => (
-            <TouchableOpacity
-              key={a}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: activityLevel === a ? theme.accent : theme.background,
-                  borderColor: activityLevel === a ? theme.accent : theme.border,
-                },
-              ]}
-              onPress={() => updateProfile({ activityLevel: a })}
-            >
-              <Text style={[styles.pillText, { color: activityLevel === a ? '#FFFFFF' : theme.text }]}>
-                {a.charAt(0).toUpperCase() + a.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-      </View>
-
-      {/* Smart Goal — elevated as its own section */}
-      <View style={[styles.goalCard, { backgroundColor: theme.surfaceElevated }]}>
-        <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>Your daily goal</Text>
-        <Text style={[styles.goalValue, { color: theme.text }]}>{goalL} L</Text>
-        <Text style={[styles.goalBreakdown, { color: theme.textSecondary }]}>
-          Base {baseL}L + Weather +{weatherL}L + Activity +{activityTotalL}L
-        </Text>
-      </View>
-
-      {/* Environment card */}
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Environment</Text>
-
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Climate Preference</Text>
-        <View style={styles.pillGrid}>
-          {(['cold', 'temperate', 'hot', 'tropical'] as const).map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[
-                styles.pillSmall,
-                {
-                  backgroundColor: climatePreference === c ? theme.accent : theme.background,
-                  borderColor: climatePreference === c ? theme.accent : theme.border,
-                },
-              ]}
-              onPress={() => updateProfile({ climatePreference: c })}
-            >
-              <Text style={[styles.pillTextSmall, { color: climatePreference === c ? '#FFFFFF' : theme.text }]}>
-                {c.charAt(0).toUpperCase() + c.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-      </View>
-
-      {/* Health card */}
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Health</Text>
-        <Text style={[styles.toggleDesc, { color: theme.textSecondary, marginBottom: 12 }]}>
-          {healthConnected
-            ? 'Tracking activity to auto-adjust your water goal'
-            : 'Connect to track activity and auto-adjust your water goal'}
-        </Text>
-        {healthConnected ? (
-          <View style={[styles.healthConnectedRow]}>
-            <View style={[styles.healthDot, { backgroundColor: '#4CAF50' }]} />
-            <Text style={[styles.healthConnectedText, { color: '#4CAF50' }]}>Connected</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.healthButton, { backgroundColor: healthConnecting ? theme.border : theme.accent }]}
-            onPress={async () => {
-              if (healthConnecting) return;
-              setHealthConnecting(true);
-              const granted = await requestHealthPermissions();
-              setHealthConnected(granted);
-              setHealthConnecting(false);
-            }}
-            activeOpacity={0.7}
-            disabled={healthConnecting}
-          >
-            <Text style={styles.healthButtonText}>
-              {healthConnecting ? 'Connecting...' : 'Connect Health'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Reminders card */}
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Reminders</Text>
-
-        <View style={styles.toggleRow}>
-          <View>
-            <Text style={[styles.toggleLabel, { color: theme.text }]}>Hourly reminders</Text>
-            <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>
-              Between wake-up and sleep time
-            </Text>
-          </View>
-          <Switch
-            value={remindersEnabled}
-            onValueChange={handleReminderToggle}
-            trackColor={{ false: theme.border, true: theme.accent }}
-            thumbColor="#FFFFFF"
+          <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+            Name
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                backgroundColor: theme.background,
+                borderColor: theme.border,
+              },
+            ]}
+            value={nameText}
+            onChangeText={setNameText}
+            onBlur={handleNameBlur}
+            placeholderTextColor={theme.textSecondary}
           />
-        </View>
 
-        <View style={[styles.timeRow, { borderTopColor: theme.border }]}>
-          <View style={styles.timeField}>
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Wake-up</Text>
-            <TouchableOpacity
-              style={[styles.timeButton, { backgroundColor: theme.background, borderColor: theme.border }]}
-              onPress={() => setShowWakePicker(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.timeValue, { color: theme.text }]}>{timeToString(wakeUpTime)}</Text>
-            </TouchableOpacity>
-            {showWakePicker && (
-              <DateTimePicker
-                value={makeTimeDate(wakeUpTime)}
-                mode="time"
-                is24Hour
-                onChange={handleWakeTimeChange}
+          <View style={styles.fieldRow}>
+            <View style={styles.fieldHalf}>
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Weight (kg)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: theme.text,
+                    backgroundColor: theme.background,
+                    borderColor: weightError ? theme.error : theme.border,
+                  },
+                ]}
+                value={weightText}
+                onChangeText={setWeightText}
+                onBlur={handleWeightBlur}
+                keyboardType="numeric"
               />
-            )}
+              {weightError && (
+                <Text style={[styles.errorText, { color: theme.error }]}>
+                  {weightError}
+                </Text>
+              )}
+            </View>
+            <View style={styles.fieldHalf}>
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Age
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: theme.text,
+                    backgroundColor: theme.background,
+                    borderColor: ageError ? theme.error : theme.border,
+                  },
+                ]}
+                value={ageText}
+                onChangeText={setAgeText}
+                onBlur={handleAgeBlur}
+                keyboardType="numeric"
+              />
+              {ageError && (
+                <Text style={[styles.errorText, { color: theme.error }]}>
+                  {ageError}
+                </Text>
+              )}
+            </View>
           </View>
 
-          <View style={[styles.timeDivider, { backgroundColor: theme.border }]} />
+          {/* Gender */}
+          <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+            Gender
+          </Text>
+          <View style={styles.pillRow}>
+            {(['male', 'female', 'other'] as const).map(g => (
+              <TouchableOpacity
+                key={g}
+                style={[
+                  styles.pill,
+                  {
+                    backgroundColor:
+                      gender === g ? theme.accent : theme.background,
+                    borderColor: gender === g ? theme.accent : theme.border,
+                  },
+                ]}
+                onPress={() => updateProfile({ gender: g })}
+              >
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: gender === g ? '#FFFFFF' : theme.text },
+                  ]}
+                >
+                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-          <View style={styles.timeField}>
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Sleep</Text>
-            <TouchableOpacity
-              style={[styles.timeButton, { backgroundColor: theme.background, borderColor: theme.border }]}
-              onPress={() => setShowSleepPicker(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.timeValue, { color: theme.text }]}>{timeToString(sleepTime)}</Text>
-            </TouchableOpacity>
-            {showSleepPicker && (
-              <DateTimePicker
-                value={makeTimeDate(sleepTime)}
-                mode="time"
-                is24Hour
-                onChange={handleSleepTimeChange}
-              />
-            )}
+          {/* Activity Level */}
+          <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+            Activity Level
+          </Text>
+          <View style={styles.pillRow}>
+            {(['sedentary', 'moderate', 'active'] as const).map(a => (
+              <TouchableOpacity
+                key={a}
+                style={[
+                  styles.pill,
+                  {
+                    backgroundColor:
+                      activityLevel === a ? theme.accent : theme.background,
+                    borderColor:
+                      activityLevel === a ? theme.accent : theme.border,
+                  },
+                ]}
+                onPress={() => updateProfile({ activityLevel: a })}
+              >
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: activityLevel === a ? '#FFFFFF' : theme.text },
+                  ]}
+                >
+                  {a.charAt(0).toUpperCase() + a.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
-      </View>
 
-        <View style={{ height: 100 }} />
+        {/* Smart Goal — elevated as its own section */}
+        <View
+          style={[styles.goalCard, { backgroundColor: theme.surfaceElevated }]}
+        >
+          <Text style={[styles.goalLabel, { color: theme.textSecondary }]}>
+            Your daily goal
+          </Text>
+          <Text style={[styles.goalValue, { color: theme.text }]}>
+            {goalL} L
+          </Text>
+          <Text style={[styles.goalBreakdown, { color: theme.textSecondary }]}>
+            Base {baseL}L + Weather +{weatherL}L + Activity +{activityTotalL}L
+          </Text>
+        </View>
+
+        {/* Environment card */}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+            Environment
+          </Text>
+
+          <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+            Climate Preference
+          </Text>
+          <View style={styles.pillGrid}>
+            {(['cold', 'temperate', 'hot', 'tropical'] as const).map(c => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.pillSmall,
+                  {
+                    backgroundColor:
+                      climatePreference === c ? theme.accent : theme.background,
+                    borderColor:
+                      climatePreference === c ? theme.accent : theme.border,
+                  },
+                ]}
+                onPress={() => updateProfile({ climatePreference: c })}
+              >
+                <Text
+                  style={[
+                    styles.pillTextSmall,
+                    { color: climatePreference === c ? '#FFFFFF' : theme.text },
+                  ]}
+                >
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Health card */}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+            Health
+          </Text>
+          <Text
+            style={[
+              styles.toggleDesc,
+              { color: theme.textSecondary, marginBottom: 12 },
+            ]}
+          >
+            {healthConnected
+              ? 'Tracking activity to auto-adjust your water goal'
+              : 'Connect to track activity and auto-adjust your water goal'}
+          </Text>
+          {healthConnected ? (
+            <View style={[styles.healthConnectedRow]}>
+              <View
+                style={[styles.healthDot, { backgroundColor: '#4CAF50' }]}
+              />
+              <Text style={[styles.healthConnectedText, { color: '#4CAF50' }]}>
+                Connected
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.healthButton,
+                {
+                  backgroundColor: healthConnecting
+                    ? theme.border
+                    : theme.accent,
+                },
+              ]}
+              onPress={async () => {
+                if (healthConnecting) return;
+                setHealthConnecting(true);
+                const granted = await requestHealthPermissions();
+                setHealthConnected(granted);
+                setHealthConnecting(false);
+              }}
+              activeOpacity={0.7}
+              disabled={healthConnecting}
+            >
+              <Text style={styles.healthButtonText}>
+                {healthConnecting ? 'Connecting...' : 'Connect Health'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Reminders card */}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+            Reminders
+          </Text>
+
+          <View style={styles.toggleRow}>
+            <View>
+              <Text style={[styles.toggleLabel, { color: theme.text }]}>
+                Hourly reminders
+              </Text>
+              <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>
+                Between wake-up and sleep time
+              </Text>
+            </View>
+            <Switch
+              value={remindersEnabled}
+              onValueChange={handleReminderToggle}
+              trackColor={{ false: theme.border, true: theme.accent }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={[styles.timeRow, { borderTopColor: theme.border }]}>
+            <View style={styles.timeField}>
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Wake-up
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.timeButton,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.border,
+                  },
+                ]}
+                onPress={() => setShowWakePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.timeValue, { color: theme.text }]}>
+                  {timeToString(wakeUpTime)}
+                </Text>
+              </TouchableOpacity>
+              {showWakePicker && (
+                <DateTimePicker
+                  value={makeTimeDate(wakeUpTime)}
+                  mode="time"
+                  is24Hour
+                  onChange={handleWakeTimeChange}
+                />
+              )}
+            </View>
+
+            <View
+              style={[styles.timeDivider, { backgroundColor: theme.border }]}
+            />
+
+            <View style={styles.timeField}>
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Sleep
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.timeButton,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.border,
+                  },
+                ]}
+                onPress={() => setShowSleepPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.timeValue, { color: theme.text }]}>
+                  {timeToString(sleepTime)}
+                </Text>
+              </TouchableOpacity>
+              {showSleepPicker && (
+                <DateTimePicker
+                  value={makeTimeDate(sleepTime)}
+                  mode="time"
+                  is24Hour
+                  onChange={handleSleepTimeChange}
+                />
+              )}
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -572,5 +739,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.semiBold,
   },
-
 });

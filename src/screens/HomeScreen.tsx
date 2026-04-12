@@ -9,29 +9,30 @@
 // - Quick-log buttons are now bold numeric buttons, not cards with emoji
 // - Warmer accent (amber) used for the Custom button to break monochrome
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
+  Animated,
+  AppState,
   ScrollView,
   StyleSheet,
-  AppState,
-  Animated,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import { Fonts } from '../fonts';
+import { LogWaterModal } from '../components/LogWaterModal';
+import { StreakCounter } from '../components/StreakCounter';
+import { WaterProgressBar } from '../components/WaterProgressBar';
+import { WeatherCard } from '../components/WeatherCard';
+import { WeeklyChart } from '../components/WeeklyChart';
 import { getTheme } from '../theme';
+import { getTodayActiveMinutes } from '../utils/healthService';
+import { scheduleReminders } from '../utils/notificationScheduler';
+import { useGoalStore } from '../store/useGoalStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
-import { useGoalStore } from '../store/useGoalStore';
-import { WaterProgressBar } from '../components/WaterProgressBar';
-import { LogWaterModal } from '../components/LogWaterModal';
-import { scheduleReminders } from '../utils/notificationScheduler';
-import { getTodayActiveMinutes } from '../utils/healthService';
-import { Fonts } from '../fonts';
-import { WeatherCard } from '../components/WeatherCard';
-import { StreakCounter } from '../components/StreakCounter';
-import { WeeklyChart } from '../components/WeeklyChart';
 
 const QUICK_LOG = [150, 250, 500];
 
@@ -45,7 +46,7 @@ function getGreeting(): string {
 function getMotivation(progress: number): string {
   if (progress === 0) return 'Start your day with a glass of water';
   if (progress < 0.25) return 'Great start, keep going';
-  if (progress < 0.5) return 'You\'re making progress';
+  if (progress < 0.5) return "You're making progress";
   if (progress < 0.75) return 'More than halfway there';
   if (progress < 1) return 'Almost at your goal';
   return 'Daily goal reached';
@@ -64,23 +65,23 @@ export function HomeScreen() {
   const theme = getTheme(null);
   const insets = useSafeAreaInsets();
 
-  const name = useUserStore((s) => s.name);
-  const wakeUpTime = useUserStore((s) => s.wakeUpTime);
-  const sleepTime = useUserStore((s) => s.sleepTime);
-  const remindersEnabled = useUserStore((s) => s.remindersEnabled);
+  const name = useUserStore(s => s.name);
+  const wakeUpTime = useUserStore(s => s.wakeUpTime);
+  const sleepTime = useUserStore(s => s.sleepTime);
+  const remindersEnabled = useUserStore(s => s.remindersEnabled);
 
-  const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
-  const goalAdjustmentToast = useGoalStore((s) => s.goalAdjustmentToast);
-  const clearToast = useGoalStore((s) => s.clearToast);
-  const lastActiveMinutes = useGoalStore((s) => s.lastActiveMinutes);
-  const activityBump = useGoalStore((s) => s.activityBump);
+  const effectiveGoal = useGoalStore(s => s.effectiveGoal);
+  const goalAdjustmentToast = useGoalStore(s => s.goalAdjustmentToast);
+  const clearToast = useGoalStore(s => s.clearToast);
+  const lastActiveMinutes = useGoalStore(s => s.lastActiveMinutes);
+  const activityBump = useGoalStore(s => s.activityBump);
 
-  const consumed = useWaterStore((s) => s.consumed);
-  const lastLogAmount = useWaterStore((s) => s.lastLogAmount);
-  const lastLoggedAt = useWaterStore((s) => s.lastLoggedAt);
-  const logWater = useWaterStore((s) => s.logWater);
-  const undoLastLog = useWaterStore((s) => s.undoLastLog);
-  const checkMidnightReset = useWaterStore((s) => s.checkMidnightReset);
+  const consumed = useWaterStore(s => s.consumed);
+  const lastLogAmount = useWaterStore(s => s.lastLogAmount);
+  const lastLoggedAt = useWaterStore(s => s.lastLoggedAt);
+  const logWater = useWaterStore(s => s.logWater);
+  const undoLastLog = useWaterStore(s => s.undoLastLog);
+  const checkMidnightReset = useWaterStore(s => s.checkMidnightReset);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
@@ -93,17 +94,19 @@ export function HomeScreen() {
   const progress = effectiveGoal > 0 ? consumed / effectiveGoal : 0;
 
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
+    const sub = AppState.addEventListener('change', state => {
       if (state === 'active') {
         checkMidnightReset();
         const currentGoal = useGoalStore.getState().effectiveGoal;
         scheduleReminders(
-          wakeUpTime, sleepTime,
+          wakeUpTime,
+          sleepTime,
           useWaterStore.getState().consumed,
-          currentGoal, remindersEnabled,
+          currentGoal,
+          remindersEnabled,
         );
         // Check for activity bumps
-        getTodayActiveMinutes().then((minutes) => {
+        getTodayActiveMinutes().then(minutes => {
           useGoalStore.getState().applyActivityBump(minutes);
         });
       }
@@ -114,7 +117,7 @@ export function HomeScreen() {
   useEffect(() => {
     checkMidnightReset();
     // Initial activity check on mount
-    getTodayActiveMinutes().then((minutes) => {
+    getTodayActiveMinutes().then(minutes => {
       useGoalStore.getState().applyActivityBump(minutes);
     });
   }, [checkMidnightReset]);
@@ -124,38 +127,84 @@ export function HomeScreen() {
     if (goalAdjustmentToast) {
       if (goalToastTimer.current) clearTimeout(goalToastTimer.current);
       setShowGoalToast(true);
-      Animated.timing(goalToastOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+      Animated.timing(goalToastOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
       goalToastTimer.current = setTimeout(() => {
-        Animated.timing(goalToastOpacity, { toValue: 0, duration: 250, useNativeDriver: true })
-          .start(() => {
-            setShowGoalToast(false);
-            clearToast();
-          });
+        Animated.timing(goalToastOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowGoalToast(false);
+          clearToast();
+        });
       }, 4000);
     }
   }, [goalAdjustmentToast, goalToastOpacity, clearToast]);
 
-  const handleQuickLog = useCallback((amount: number) => {
-    logWater(amount);
-    const newConsumed = consumed + amount;
-    scheduleReminders(wakeUpTime, sleepTime, newConsumed, effectiveGoal, remindersEnabled);
-    showUndoToast();
-  }, [consumed, logWater, wakeUpTime, sleepTime, effectiveGoal, remindersEnabled]);
+  const handleQuickLog = useCallback(
+    (amount: number) => {
+      logWater(amount);
+      const newConsumed = consumed + amount;
+      scheduleReminders(
+        wakeUpTime,
+        sleepTime,
+        newConsumed,
+        effectiveGoal,
+        remindersEnabled,
+      );
+      showUndoToast();
+    },
+    [
+      consumed,
+      logWater,
+      wakeUpTime,
+      sleepTime,
+      effectiveGoal,
+      remindersEnabled,
+    ],
+  );
 
-  const handleModalLog = useCallback((amount: number) => {
-    logWater(amount);
-    const newConsumed = consumed + amount;
-    scheduleReminders(wakeUpTime, sleepTime, newConsumed, effectiveGoal, remindersEnabled);
-    showUndoToast();
-  }, [consumed, logWater, wakeUpTime, sleepTime, effectiveGoal, remindersEnabled]);
+  const handleModalLog = useCallback(
+    (amount: number) => {
+      logWater(amount);
+      const newConsumed = consumed + amount;
+      scheduleReminders(
+        wakeUpTime,
+        sleepTime,
+        newConsumed,
+        effectiveGoal,
+        remindersEnabled,
+      );
+      showUndoToast();
+    },
+    [
+      consumed,
+      logWater,
+      wakeUpTime,
+      sleepTime,
+      effectiveGoal,
+      remindersEnabled,
+    ],
+  );
 
   function showUndoToast() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setShowUndo(true);
-    Animated.timing(undoOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    Animated.timing(undoOpacity, {
+      toValue: 1,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
     undoTimer.current = setTimeout(() => {
-      Animated.timing(undoOpacity, { toValue: 0, duration: 250, useNativeDriver: true })
-        .start(() => setShowUndo(false));
+      Animated.timing(undoOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => setShowUndo(false));
     }, 5000);
   }
 
@@ -165,13 +214,33 @@ export function HomeScreen() {
     setShowUndo(false);
     undoOpacity.setValue(0);
     const reverted = useWaterStore.getState().consumed;
-    scheduleReminders(wakeUpTime, sleepTime, reverted, effectiveGoal, remindersEnabled);
-  }, [undoLastLog, wakeUpTime, sleepTime, effectiveGoal, remindersEnabled, undoOpacity]);
+    scheduleReminders(
+      wakeUpTime,
+      sleepTime,
+      reverted,
+      effectiveGoal,
+      remindersEnabled,
+    );
+  }, [
+    undoLastLog,
+    wakeUpTime,
+    sleepTime,
+    effectiveGoal,
+    remindersEnabled,
+    undoOpacity,
+  ]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
+    <View
+      style={[
+        styles.screen,
+        { backgroundColor: theme.background, paddingTop: insets.top },
+      ]}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header — just greeting + name, no redundant goal */}
         <View style={styles.header}>
           <Text style={[styles.greeting, { color: theme.textSecondary }]}>
@@ -185,7 +254,11 @@ export function HomeScreen() {
 
         {/* Hero progress ring with water fill */}
         <View style={styles.ringSection}>
-          <WaterProgressBar consumed={consumed} dailyGoal={effectiveGoal} theme={theme} />
+          <WaterProgressBar
+            consumed={consumed}
+            dailyGoal={effectiveGoal}
+            theme={theme}
+          />
         </View>
 
         {/* Streak counter — hidden when 0 */}
@@ -207,15 +280,24 @@ export function HomeScreen() {
 
         {/* Quick-log buttons */}
         <View style={styles.quickLogRow}>
-          {QUICK_LOG.map((ml) => (
+          {QUICK_LOG.map(ml => (
             <TouchableOpacity
               key={ml}
-              style={[styles.quickLogButton, { backgroundColor: theme.surface }]}
+              style={[
+                styles.quickLogButton,
+                { backgroundColor: theme.surface },
+              ]}
               onPress={() => handleQuickLog(ml)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.quickLogAmount, { color: theme.text }]}>{ml}</Text>
-              <Text style={[styles.quickLogUnit, { color: theme.textSecondary }]}>ml</Text>
+              <Text style={[styles.quickLogAmount, { color: theme.text }]}>
+                {ml}
+              </Text>
+              <Text
+                style={[styles.quickLogUnit, { color: theme.textSecondary }]}
+              >
+                ml
+              </Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
@@ -224,7 +306,9 @@ export function HomeScreen() {
             activeOpacity={0.7}
           >
             <Text style={[styles.customPlus, { color: '#FFFFFF' }]}>+</Text>
-            <Text style={[styles.customLabel, { color: '#FFFFFF' }]}>Custom</Text>
+            <Text style={[styles.customLabel, { color: '#FFFFFF' }]}>
+              Custom
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -243,8 +327,6 @@ export function HomeScreen() {
             </Text>
           </View>
         )}
-
-        <View style={{ height: 100 }} />
       </ScrollView>
 
       <LogWaterModal
@@ -259,15 +341,25 @@ export function HomeScreen() {
         <Animated.View
           style={[
             styles.undoToast,
-            { backgroundColor: theme.surface, borderColor: theme.border, opacity: undoOpacity, bottom: 100 + insets.bottom },
+            {
+              backgroundColor: theme.surface,
+              borderColor: theme.border,
+              opacity: undoOpacity,
+              bottom: 100 + insets.bottom,
+            },
           ]}
         >
           <View style={[styles.undoBar, { backgroundColor: theme.accent }]} />
           <Text style={[styles.undoText, { color: theme.text }]}>
             +{lastLogAmount}ml
           </Text>
-          <TouchableOpacity onPress={handleUndo} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={[styles.undoAction, { color: theme.accent }]}>Undo</Text>
+          <TouchableOpacity
+            onPress={handleUndo}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={[styles.undoAction, { color: theme.accent }]}>
+              Undo
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -277,10 +369,17 @@ export function HomeScreen() {
         <Animated.View
           style={[
             styles.undoToast,
-            { backgroundColor: theme.surface, borderColor: theme.accentWarm, opacity: goalToastOpacity, bottom: (showUndo ? 156 : 100) + insets.bottom },
+            {
+              backgroundColor: theme.surface,
+              borderColor: theme.accentWarm,
+              opacity: goalToastOpacity,
+              bottom: (showUndo ? 156 : 100) + insets.bottom,
+            },
           ]}
         >
-          <View style={[styles.undoBar, { backgroundColor: theme.accentWarm }]} />
+          <View
+            style={[styles.undoBar, { backgroundColor: theme.accentWarm }]}
+          />
           <Text style={[styles.undoText, { color: theme.text }]}>
             {goalAdjustmentToast}
           </Text>
@@ -296,7 +395,12 @@ const styles = StyleSheet.create({
 
   header: { paddingTop: 16, marginBottom: 4 },
   greeting: { fontSize: 15, fontFamily: Fonts.regular, letterSpacing: 0.2 },
-  name: { fontSize: 26, fontFamily: Fonts.semiBold, letterSpacing: -0.3, marginTop: 2 },
+  name: {
+    fontSize: 26,
+    fontFamily: Fonts.semiBold,
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
 
   ringSection: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
 
@@ -364,6 +468,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   undoBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
-  undoText: { flex: 1, fontSize: 14, fontFamily: Fonts.semiBold, marginLeft: 8 },
+  undoText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    marginLeft: 8,
+  },
   undoAction: { fontSize: 14, fontFamily: Fonts.bold, letterSpacing: 0.3 },
 });
