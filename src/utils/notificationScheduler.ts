@@ -95,6 +95,16 @@ export async function scheduleReminders(
           channelId: CHANNEL_ID,
           pressAction: { id: 'default' },
         },
+        ios: {
+          sound: 'water_drop.wav',
+          interruptionLevel: 'timeSensitive',
+          foregroundPresentationOptions: {
+            sound: true,
+            banner: true,
+            list: true,
+            badge: true,
+          },
+        },
       },
       trigger,
     );
