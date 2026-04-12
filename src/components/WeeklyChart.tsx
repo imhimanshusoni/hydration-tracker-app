@@ -2,9 +2,9 @@
 // Shows rolling last 7 days. Today's bar is amber and updates live.
 // Hidden until 2+ days of history exist.
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { useHistoryStore } from '../store/useHistoryStore';
+import { useHistoryStore, computeLast7Days } from '../store/useHistoryStore';
 import { useWaterStore } from '../store/useWaterStore';
 import { useGoalStore } from '../store/useGoalStore';
 import type { AppTheme } from '../theme';
@@ -36,9 +36,11 @@ interface WeeklyChartProps {
 }
 
 export function WeeklyChart({ theme }: WeeklyChartProps) {
-  const last7 = useHistoryStore((s) => s.getLast7Days());
+  const snapshots = useHistoryStore((s) => s.snapshots);
   const consumed = useWaterStore((s) => s.consumed);
   const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
+
+  const last7 = useMemo(() => computeLast7Days(snapshots), [snapshots]);
 
   // Count non-null past entries (exclude today at index 6)
   const pastDaysWithData = last7.slice(0, 6).filter((d) => d !== null).length;

@@ -1,9 +1,9 @@
 // Streak counter — amber dot + "N day streak" text.
 // Hidden when streak is 0. Includes today if goal is met.
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useHistoryStore } from '../store/useHistoryStore';
+import { useHistoryStore, computeCurrentStreak } from '../store/useHistoryStore';
 import { useWaterStore } from '../store/useWaterStore';
 import { useGoalStore } from '../store/useGoalStore';
 import type { AppTheme } from '../theme';
@@ -14,9 +14,11 @@ interface StreakCounterProps {
 }
 
 export function StreakCounter({ theme }: StreakCounterProps) {
-  const historicalStreak = useHistoryStore((s) => s.getCurrentStreak());
+  const snapshots = useHistoryStore((s) => s.snapshots);
   const consumed = useWaterStore((s) => s.consumed);
   const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
+
+  const historicalStreak = useMemo(() => computeCurrentStreak(snapshots), [snapshots]);
 
   const todayMet = effectiveGoal > 0 && consumed >= effectiveGoal;
   const streak = historicalStreak + (todayMet ? 1 : 0);

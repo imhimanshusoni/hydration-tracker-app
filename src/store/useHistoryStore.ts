@@ -14,6 +14,36 @@ interface HistoryState {
   getLast7Days: () => (DailySnapshot | null)[];
 }
 
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Standalone functions for use in components with useMemo (avoids new-reference-per-render)
+export function computeCurrentStreak(snapshots: Record<string, DailySnapshot>): number {
+  let streak = 0;
+  const today = new Date();
+  for (let i = 1; i <= MAX_AGE_DAYS; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const snap = snapshots[formatDate(d)];
+    if (!snap || !snap.goalMet) break;
+    streak++;
+  }
+  return streak;
+}
+
+export function computeLast7Days(snapshots: Record<string, DailySnapshot>): (DailySnapshot | null)[] {
+  const result: (DailySnapshot | null)[] = [];
+  const today = new Date();
+  for (let i = 6; i >= 1; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    result.push(snapshots[formatDate(d)] ?? null);
+  }
+  result.push(null); // Today placeholder
+  return result;
+}
+
 const MAX_AGE_DAYS = 30;
 
 export const useHistoryStore = create<HistoryState>()(
@@ -45,34 +75,9 @@ export const useHistoryStore = create<HistoryState>()(
         });
       },
 
-      getCurrentStreak: () => {
-        const { snapshots } = get();
-        let streak = 0;
-        const today = new Date();
-        for (let i = 1; i <= MAX_AGE_DAYS; i++) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          const snap = snapshots[dateStr];
-          if (!snap || !snap.goalMet) break;
-          streak++;
-        }
-        return streak;
-      },
+      getCurrentStreak: () => computeCurrentStreak(get().snapshots),
 
-      getLast7Days: () => {
-        const { snapshots } = get();
-        const result: (DailySnapshot | null)[] = [];
-        const today = new Date();
-        for (let i = 6; i >= 1; i--) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          result.push(snapshots[dateStr] ?? null);
-        }
-        result.push(null); // Today placeholder
-        return result;
-      },
+      getLast7Days: () => computeLast7Days(get().snapshots),
     }),
     {
       name: 'history-store',
