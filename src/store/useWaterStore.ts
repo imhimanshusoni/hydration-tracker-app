@@ -57,7 +57,7 @@ export const useWaterStore = create<WaterState>()(
       checkMidnightReset: () => {
         const today = getTodayDate();
         const state = get();
-        if (state.date !== today) {
+        if (state.date !== today && state.date !== '') {
           // Archive yesterday's data before resetting
           const { useHistoryStore } = require('./useHistoryStore');
           const { useGoalStore } = require('./useGoalStore');

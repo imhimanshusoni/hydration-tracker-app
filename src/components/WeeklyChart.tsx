@@ -160,7 +160,6 @@ const styles = StyleSheet.create({
   chartRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 0,
   },
   barContainer: {
     flex: 1,
