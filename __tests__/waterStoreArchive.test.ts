@@ -13,13 +13,9 @@ jest.mock('react-native-mmkv', () => {
   };
 });
 
-jest.mock('react-native-health', () => ({
-  __esModule: true,
-  default: {
-    initHealthKit: jest.fn((_p: unknown, cb: (err: string | null) => void) => cb(null)),
-    getAppleExerciseTime: jest.fn((_o: unknown, cb: (err: object | null, r: Array<{value: number}>) => void) => cb(null, [])),
-    Constants: { Permissions: { ActiveEnergyBurned: 'ActiveEnergyBurned', AppleExerciseTime: 'AppleExerciseTime' } },
-  },
+jest.mock('@kingstinct/react-native-healthkit', () => ({
+  requestAuthorization: jest.fn().mockResolvedValue(true),
+  queryQuantitySamples: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('react-native-health-connect', () => ({

@@ -59,18 +59,9 @@ jest.mock('react-native-geolocation-service', () => ({
   },
 }));
 
-jest.mock('react-native-health', () => ({
-  __esModule: true,
-  default: {
-    initHealthKit: jest.fn((_perms: unknown, cb: (err: string | null) => void) => cb(null)),
-    getAppleExerciseTime: jest.fn((_opts: unknown, cb: (err: object | null, results: Array<{value: number}>) => void) => cb(null, [])),
-    Constants: {
-      Permissions: {
-        ActiveEnergyBurned: 'ActiveEnergyBurned',
-        AppleExerciseTime: 'AppleExerciseTime',
-      },
-    },
-  },
+jest.mock('@kingstinct/react-native-healthkit', () => ({
+  requestAuthorization: jest.fn().mockResolvedValue(true),
+  queryQuantitySamples: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('react-native-health-connect', () => ({

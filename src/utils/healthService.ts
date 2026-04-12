@@ -1,57 +1,55 @@
 // Platform-abstracted health data service.
-// iOS: Apple HealthKit via react-native-health
+// iOS: Apple HealthKit via @kingstinct/react-native-healthkit
 // Android: Health Connect via react-native-health-connect
 
 import { Platform } from 'react-native';
 
 // ----- iOS (HealthKit) -----
 
-function iosRequestPermissions(): Promise<boolean> {
+async function iosRequestPermissions(): Promise<boolean> {
   try {
-    const AppleHealthKit = require('react-native-health').default;
-    const permissions = {
-      permissions: {
-        read: [
-          AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-          AppleHealthKit.Constants.Permissions.AppleExerciseTime,
-        ],
-        write: [],
-      },
-    };
-    return new Promise((resolve) => {
-      AppleHealthKit.initHealthKit(permissions, (error: string) => {
-        resolve(!error);
-      });
+    const { requestAuthorization } =
+      require('@kingstinct/react-native-healthkit');
+    await requestAuthorization({
+      toRead: [
+        'HKQuantityTypeIdentifierActiveEnergyBurned',
+        'HKQuantityTypeIdentifierAppleExerciseTime',
+      ],
     });
+    return true;
   } catch {
-    return Promise.resolve(false);
+    return false;
   }
 }
 
-function iosGetActiveMinutes(): Promise<number> {
+async function iosGetActiveMinutes(): Promise<number> {
   try {
-    const AppleHealthKit = require('react-native-health').default;
+    const { queryQuantitySamples } =
+      require('@kingstinct/react-native-healthkit');
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const options = {
-      startDate: startOfDay.toISOString(),
-      endDate: now.toISOString(),
-    };
-    return new Promise((resolve) => {
-      AppleHealthKit.getAppleExerciseTime(
-        options,
-        (err: object, results: Array<{ value: number }>) => {
-          if (err || !results) {
-            resolve(0);
-            return;
-          }
-          const total = results.reduce((sum, r) => sum + (r.value || 0), 0);
-          resolve(Math.round(total));
+    const startOfDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+
+    const samples: Array<{ quantity: number }> = await queryQuantitySamples(
+      'HKQuantityTypeIdentifierAppleExerciseTime',
+      {
+        unit: 'min',
+        filter: {
+          date: {
+            startDate: startOfDay,
+            endDate: now,
+          },
         },
-      );
-    });
+      },
+    );
+
+    const total = samples.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    return Math.round(total);
   } catch {
-    return Promise.resolve(0);
+    return 0;
   }
 }
 
