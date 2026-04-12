@@ -18,6 +18,7 @@
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		E21A0924EC25424DA51EC39E /* Poppins-Thin.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0F50118AB0BC4A9B80523555 /* Poppins-Thin.ttf */; };
 		F933D9C95CF94C978166A141 /* Poppins-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C397B5E78C3E45099FC070BC /* Poppins-Regular.ttf */; };
+		A3F2C1D8E4B5097634F1A2B3 /* water_drop.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7E9D0F1B2A3456789ABCDEF /* water_drop.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		C397B5E78C3E45099FC070BC /* Poppins-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Regular.ttf"; path = "../assets/fonts/Poppins-Regular.ttf"; sourceTree = "<group>"; };
 		DD468BA476B84895B9A6A956 /* Poppins-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Medium.ttf"; path = "../assets/fonts/Poppins-Medium.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		C7E9D0F1B2A3456789ABCDEF /* water_drop.wav */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = audio.wav; name = "water_drop.wav"; path = "../assets/sounds/water_drop.wav"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +122,7 @@
 				B1648FE102704445BF57FC0E /* Poppins-Bold.ttf */,
 				0F50118AB0BC4A9B80523555 /* Poppins-Thin.ttf */,
 				56E7E4794B214E818E02E08E /* Poppins-SemiBold.ttf */,
+				C7E9D0F1B2A3456789ABCDEF /* water_drop.wav */,
 			);
 			name = Resources;
 			path = "";
@@ -194,6 +197,7 @@
 				4CE98CB2453B40FA9D44BDED /* Poppins-Bold.ttf in Resources */,
 				E21A0924EC25424DA51EC39E /* Poppins-Thin.ttf in Resources */,
 				4D658140EA354714B6170169 /* Poppins-SemiBold.ttf in Resources */,
+				A3F2C1D8E4B5097634F1A2B3 /* water_drop.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
