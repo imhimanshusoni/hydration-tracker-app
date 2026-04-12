@@ -84,3 +84,108 @@ describe('pruneOldEntries', () => {
     expect(snapshots[date30]).toBeDefined();
   });
 });
+
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return formatDate(d);
+}
+
+describe('getCurrentStreak', () => {
+  it('returns 0 when no history', () => {
+    expect(useHistoryStore.getState().getCurrentStreak()).toBe(0);
+  });
+
+  it('returns 0 when yesterday goal was not met', () => {
+    useHistoryStore.setState({
+      snapshots: {
+        [daysAgo(1)]: makeSnapshot(daysAgo(1), 1000, 2800),
+      },
+    });
+    expect(useHistoryStore.getState().getCurrentStreak()).toBe(0);
+  });
+
+  it('returns 1 when only yesterday goal was met', () => {
+    useHistoryStore.setState({
+      snapshots: {
+        [daysAgo(1)]: makeSnapshot(daysAgo(1), 2800, 2800),
+      },
+    });
+    expect(useHistoryStore.getState().getCurrentStreak()).toBe(1);
+  });
+
+  it('counts consecutive days backwards', () => {
+    useHistoryStore.setState({
+      snapshots: {
+        [daysAgo(1)]: makeSnapshot(daysAgo(1), 3000, 2800),
+        [daysAgo(2)]: makeSnapshot(daysAgo(2), 2900, 2800),
+        [daysAgo(3)]: makeSnapshot(daysAgo(3), 2800, 2800),
+      },
+    });
+    expect(useHistoryStore.getState().getCurrentStreak()).toBe(3);
+  });
+
+  it('stops at first missed day', () => {
+    useHistoryStore.setState({
+      snapshots: {
+        [daysAgo(1)]: makeSnapshot(daysAgo(1), 3000, 2800),
+        [daysAgo(2)]: makeSnapshot(daysAgo(2), 1000, 2800),
+        [daysAgo(3)]: makeSnapshot(daysAgo(3), 2800, 2800),
+      },
+    });
+    expect(useHistoryStore.getState().getCurrentStreak()).toBe(1);
+  });
+
+  it('stops at gap (missing day)', () => {
+    useHistoryStore.setState({
+      snapshots: {
+        [daysAgo(1)]: makeSnapshot(daysAgo(1), 3000, 2800),
+        [daysAgo(3)]: makeSnapshot(daysAgo(3), 2800, 2800),
+      },
+    });
+    expect(useHistoryStore.getState().getCurrentStreak()).toBe(1);
+  });
+});
+
+describe('getLast7Days', () => {
+  it('returns 7 entries', () => {
+    const result = useHistoryStore.getState().getLast7Days();
+    expect(result).toHaveLength(7);
+  });
+
+  it('returns null for days with no data', () => {
+    const result = useHistoryStore.getState().getLast7Days();
+    result.forEach((entry) => {
+      expect(entry).toBeNull();
+    });
+  });
+
+  it('returns snapshot data for days that have history', () => {
+    const yesterdayDate = daysAgo(1);
+    useHistoryStore.setState({
+      snapshots: {
+        [yesterdayDate]: makeSnapshot(yesterdayDate, 2500, 2800),
+      },
+    });
+    const result = useHistoryStore.getState().getLast7Days();
+    expect(result[5]).not.toBeNull();
+    expect(result[5]!.consumed).toBe(2500);
+    expect(result[6]).toBeNull();
+  });
+
+  it('places snapshots at correct indices', () => {
+    const threeDaysAgoDate = daysAgo(3);
+    useHistoryStore.setState({
+      snapshots: {
+        [threeDaysAgoDate]: makeSnapshot(threeDaysAgoDate, 2000, 2800),
+      },
+    });
+    const result = useHistoryStore.getState().getLast7Days();
+    expect(result[3]).not.toBeNull();
+    expect(result[3]!.date).toBe(threeDaysAgoDate);
+  });
+});
