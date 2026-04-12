@@ -19,13 +19,15 @@ jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: {
     createChannel: jest.fn(),
+    deleteChannel: jest.fn(),
     requestPermission: jest.fn().mockResolvedValue({authorizationStatus: 1}),
     createTriggerNotification: jest.fn(),
     cancelNotification: jest.fn(),
+    cancelAllNotifications: jest.fn(),
     getTriggerNotificationIds: jest.fn().mockResolvedValue([]),
   },
   TriggerType: {TIMESTAMP: 0},
-  AndroidImportance: {DEFAULT: 3},
+  AndroidImportance: {DEFAULT: 3, HIGH: 4},
 }));
 
 jest.mock('@react-navigation/native', () => {
