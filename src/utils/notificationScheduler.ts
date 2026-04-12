@@ -30,8 +30,8 @@ export async function requestNotificationPermission(): Promise<boolean> {
 export async function cancelAllReminders(): Promise<void> {
   const triggers = await notifee.getTriggerNotificationIds();
   const reminderIds = triggers.filter((id) => id.startsWith(NOTIFICATION_ID_PREFIX));
-  for (const id of reminderIds) {
-    await notifee.cancelNotification(id);
+  if (reminderIds.length > 0) {
+    await notifee.cancelAllNotifications(reminderIds);
   }
 }
 
