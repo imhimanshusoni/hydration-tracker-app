@@ -56,7 +56,21 @@ export const useWaterStore = create<WaterState>()(
 
       checkMidnightReset: () => {
         const today = getTodayDate();
-        if (get().date !== today) {
+        const state = get();
+        if (state.date !== today) {
+          // Archive yesterday's data before resetting
+          const { useHistoryStore } = require('./useHistoryStore');
+          const { useGoalStore } = require('./useGoalStore');
+          const goalState = useGoalStore.getState();
+          useHistoryStore.getState().archiveDay({
+            date: state.date,
+            consumed: state.consumed,
+            effectiveGoal: goalState.effectiveGoal,
+            goalMet: state.consumed >= goalState.effectiveGoal,
+            activeMinutes: goalState.lastActiveMinutes,
+            weatherBonus: goalState.weatherBonus,
+          });
+
           set({
             consumed: 0,
             lastLoggedAt: null,
@@ -65,7 +79,6 @@ export const useWaterStore = create<WaterState>()(
           });
           // Reset and recalculate the smart goal for the new day.
           // recalculateMorningGoal handles widget data write after async completion.
-          const { useGoalStore } = require('./useGoalStore');
           const goalStore = useGoalStore.getState();
           goalStore.resetDaily();
           goalStore.recalculateMorningGoal();
