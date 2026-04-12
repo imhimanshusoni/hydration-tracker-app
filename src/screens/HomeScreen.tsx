@@ -82,14 +82,17 @@ export function HomeScreen() {
   const logWater = useWaterStore(s => s.logWater);
   const undoLastLog = useWaterStore(s => s.undoLastLog);
   const checkMidnightReset = useWaterStore(s => s.checkMidnightReset);
+  const goalCelebratedToday = useWaterStore(s => s.goalCelebratedToday);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [showGoalToast, setShowGoalToast] = useState(false);
+  const [triggerCelebration, setTriggerCelebration] = useState(false);
   const undoOpacity = useRef(new Animated.Value(0)).current;
   const goalToastOpacity = useRef(new Animated.Value(0)).current;
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const goalToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevCelebratedRef = useRef(goalCelebratedToday);
 
   const progress = effectiveGoal > 0 ? consumed / effectiveGoal : 0;
 
@@ -121,6 +124,14 @@ export function HomeScreen() {
       useGoalStore.getState().applyActivityBump(minutes);
     });
   }, [checkMidnightReset]);
+
+  // Detect goal celebration transition (false → true)
+  useEffect(() => {
+    if (goalCelebratedToday && !prevCelebratedRef.current) {
+      setTriggerCelebration(true);
+    }
+    prevCelebratedRef.current = goalCelebratedToday;
+  }, [goalCelebratedToday]);
 
   // Goal adjustment toast
   useEffect(() => {
@@ -258,6 +269,7 @@ export function HomeScreen() {
             consumed={consumed}
             dailyGoal={effectiveGoal}
             theme={theme}
+            celebrate={triggerCelebration}
           />
         </View>
 

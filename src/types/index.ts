@@ -50,6 +50,7 @@ export interface WaterDay {
   lastLoggedAt: string | null; // ISO timestamp
   lastLogAmount: number | null; // ml, for undo
   date: string; // YYYY-MM-DD
+  goalCelebratedToday: boolean;
 }
 
 export interface DailySnapshot {
