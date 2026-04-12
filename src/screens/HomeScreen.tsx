@@ -30,6 +30,8 @@ import { scheduleReminders } from '../utils/notificationScheduler';
 import { getTodayActiveMinutes } from '../utils/healthService';
 import { Fonts } from '../fonts';
 import { WeatherCard } from '../components/WeatherCard';
+import { StreakCounter } from '../components/StreakCounter';
+import { WeeklyChart } from '../components/WeeklyChart';
 
 const QUICK_LOG = [150, 250, 500];
 
@@ -70,6 +72,8 @@ export function HomeScreen() {
   const effectiveGoal = useGoalStore((s) => s.effectiveGoal);
   const goalAdjustmentToast = useGoalStore((s) => s.goalAdjustmentToast);
   const clearToast = useGoalStore((s) => s.clearToast);
+  const lastActiveMinutes = useGoalStore((s) => s.lastActiveMinutes);
+  const activityBump = useGoalStore((s) => s.activityBump);
 
   const consumed = useWaterStore((s) => s.consumed);
   const lastLogAmount = useWaterStore((s) => s.lastLogAmount);
@@ -184,10 +188,22 @@ export function HomeScreen() {
           <WaterProgressBar consumed={consumed} dailyGoal={effectiveGoal} theme={theme} />
         </View>
 
-        {/* Motivational text below ring */}
-        <Text style={[styles.motivation, { color: theme.textSecondary }]}>
-          {getMotivation(progress)}
-        </Text>
+        {/* Streak counter — hidden when 0 */}
+        <StreakCounter theme={theme} />
+
+        {/* Contextual line: active minutes (if available) or motivational text */}
+        {lastActiveMinutes > 0 && activityBump > 0 ? (
+          <Text style={[styles.motivation, { color: theme.textSecondary }]}>
+            {lastActiveMinutes} min active{'\u2009\u00B7\u2009'}
+            <Text style={{ color: theme.accent, fontFamily: Fonts.medium }}>
+              +{activityBump}ml
+            </Text>
+          </Text>
+        ) : (
+          <Text style={[styles.motivation, { color: theme.textSecondary }]}>
+            {getMotivation(progress)}
+          </Text>
+        )}
 
         {/* Quick-log buttons */}
         <View style={styles.quickLogRow}>
@@ -211,6 +227,9 @@ export function HomeScreen() {
             <Text style={[styles.customLabel, { color: '#FFFFFF' }]}>Custom</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 7-day history chart — hidden until 2+ days of data */}
+        <WeeklyChart theme={theme} />
 
         {/* Last logged */}
         {lastLoggedAt && (
