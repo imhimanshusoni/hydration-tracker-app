@@ -51,3 +51,12 @@ export interface WaterDay {
   lastLogAmount: number | null; // ml, for undo
   date: string; // YYYY-MM-DD
 }
+
+export interface DailySnapshot {
+  date: string; // "YYYY-MM-DD"
+  consumed: number; // ml, final value at end of day
+  effectiveGoal: number; // ml, effective goal at time of archive
+  goalMet: boolean; // consumed >= effectiveGoal
+  activeMinutes: number; // from Health Connect/HealthKit
+  weatherBonus: number; // ml
+}
