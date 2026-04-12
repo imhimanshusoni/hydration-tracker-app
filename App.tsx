@@ -13,7 +13,7 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { useUserStore } from './src/store/useUserStore';
 import { useWaterStore } from './src/store/useWaterStore';
 import { useGoalStore } from './src/store/useGoalStore';
-import { scheduleReminders } from './src/utils/notificationScheduler';
+import { scheduleReminders, migrateNotificationChannel } from './src/utils/notificationScheduler';
 import { HomeIcon, SettingsIcon } from './src/components/TabIcons';
 import { Fonts } from './src/fonts';
 
@@ -68,10 +68,13 @@ function App() {
     if (onboardingComplete) {
       const { wakeUpTime, sleepTime, remindersEnabled } = useUserStore.getState();
       const { consumed } = useWaterStore.getState();
-      // Recalculate smart goal for today (weather + activity)
-      useGoalStore.getState().recalculateMorningGoal().then(() => {
-        const { effectiveGoal } = useGoalStore.getState();
-        scheduleReminders(wakeUpTime, sleepTime, consumed, effectiveGoal, remindersEnabled);
+      // Migrate notification channel if config has changed (runs once per version bump)
+      migrateNotificationChannel().then(() => {
+        // Recalculate smart goal for today (weather + activity)
+        useGoalStore.getState().recalculateMorningGoal().then(() => {
+          const { effectiveGoal } = useGoalStore.getState();
+          scheduleReminders(wakeUpTime, sleepTime, consumed, effectiveGoal, remindersEnabled);
+        });
       });
     }
   }, [onboardingComplete]);
