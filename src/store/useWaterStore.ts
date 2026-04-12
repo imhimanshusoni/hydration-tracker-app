@@ -26,10 +26,12 @@ export const useWaterStore = create<WaterState>()(
       lastLoggedAt: null,
       lastLogAmount: null,
       date: getTodayDate(),
+      goalCelebratedToday: false,
 
       logWater: (amount) => {
         const now = new Date().toISOString();
         const newConsumed = get().consumed + amount;
+        const wasCelebrated = get().goalCelebratedToday;
         set({
           consumed: newConsumed,
           lastLoggedAt: now,
@@ -38,6 +40,10 @@ export const useWaterStore = create<WaterState>()(
         const { useGoalStore } = require('./useGoalStore');
         const { effectiveGoal } = useGoalStore.getState();
         writeWidgetData(effectiveGoal, newConsumed, now);
+        // Fire celebration on first goal crossing today
+        if (!wasCelebrated && newConsumed >= effectiveGoal) {
+          set({ goalCelebratedToday: true });
+        }
       },
 
       undoLastLog: () => {
@@ -76,6 +82,7 @@ export const useWaterStore = create<WaterState>()(
             lastLoggedAt: null,
             lastLogAmount: null,
             date: today,
+            goalCelebratedToday: false,
           });
           // Reset and recalculate the smart goal for the new day.
           // recalculateMorningGoal handles widget data write after async completion.
@@ -93,6 +100,7 @@ export const useWaterStore = create<WaterState>()(
         lastLoggedAt: state.lastLoggedAt,
         lastLogAmount: state.lastLogAmount,
         date: state.date,
+        goalCelebratedToday: state.goalCelebratedToday,
       }),
     },
   ),
