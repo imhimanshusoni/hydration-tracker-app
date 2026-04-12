@@ -21,15 +21,49 @@ Ship a single custom water drop sound sourced from Pixabay. This gives the app a
 
 ## Code Changes
 
-**Single file:** `src/utils/notificationScheduler.ts`
+**Files:** `src/utils/notificationScheduler.ts`, `App.tsx` (to call migration at init)
 
-### 1. Channel management: delete-and-recreate
+### 1. Channel migration: version-gated delete-and-recreate
 
-Replace the current `ensureChannel()` with a delete-then-create pattern so existing installs pick up the new sound and importance settings (Android channels are immutable after creation):
+Android channels are immutable after creation, so existing installs need a delete-then-create to pick up new settings. But this should only run once per config change, not on every launch. Gate it behind a version flag in MMKV (already in the stack via `src/store/mmkv.ts`).
+
+Add a new exported function `migrateNotificationChannel()`:
+
+```typescript
+import { storage } from '../store/mmkv';
+
+const CHANNEL_VERSION = 'channel_v2';
+
+export async function migrateNotificationChannel(): Promise<void> {
+  const currentVersion = storage.getString('notificationChannelVersion');
+  if (currentVersion === CHANNEL_VERSION) return;
+
+  await notifee.cancelAllNotifications();
+  await notifee.deleteChannel(CHANNEL_ID);
+  await notifee.createChannel({
+    id: CHANNEL_ID,
+    name: 'Water Reminders',
+    importance: AndroidImportance.HIGH,
+    sound: 'water_drop',
+  });
+
+  storage.set('notificationChannelVersion', CHANNEL_VERSION);
+}
+```
+
+**Flow:**
+- First launch after update: version mismatch -> delete, recreate, save new version
+- Every subsequent launch: version matches -> skip entirely
+- Future channel config changes: bump `CHANNEL_VERSION` to `'channel_v3'` etc.
+
+Call `migrateNotificationChannel()` early in the app init (before `scheduleReminders`). Fresh installs can initialize the flag at install time so they skip this block.
+
+### 2. Update `ensureChannel()` for normal path
+
+After migration, the regular `ensureChannel()` becomes a simple create (no-op if channel already exists):
 
 ```typescript
 async function ensureChannel(): Promise<void> {
-  await notifee.deleteChannel(CHANNEL_ID);
   await notifee.createChannel({
     id: CHANNEL_ID,
     name: 'Water Reminders',
@@ -39,9 +73,7 @@ async function ensureChannel(): Promise<void> {
 }
 ```
 
-This is safe because `scheduleReminders()` already calls `cancelAllReminders()` before `ensureChannel()`, so no notifications reference the old channel when it's deleted.
-
-### 2. iOS notification config
+### 3. iOS notification config
 
 Add an `ios` block to the `createTriggerNotification` call:
 
