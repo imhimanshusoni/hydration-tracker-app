@@ -84,7 +84,7 @@ Returns array of 7 entries: today minus 6 through today minus 1 (from snapshots)
 **Placement:** Below the hero ring, above the contextual line. 8px margin below.
 
 **Rendering:**
-- Streak >= 1: 6px filled amber circle + `"{n} day streak"` / `"{n} days streak"` (singular/plural)
+- Streak >= 1: 6px filled amber circle + `"{n} day streak"` (always "day", not "days" — e.g., "12 day streak")
 - Streak 0: nothing renders, space collapses
 - Live update: adds 1 to historical streak if today's `consumed >= effectiveGoal`
 
@@ -114,7 +114,7 @@ Returns array of 7 entries: today minus 6 through today minus 1 (from snapshots)
 **Visibility:** Hidden until user has 2+ days of history data. Before that, the ring and streak carry the experience.
 
 **Layout:**
-- Optional section label: "Last 7 days" — 13px Poppins SemiBold, `theme.textSecondary`, left-aligned
+- Section label: "Last 7 days" — 13px Poppins SemiBold, `theme.textSecondary`, left-aligned
 - 7 bars in a row, flex-based containers (`flex: 1`), bars at ~60% container width
 - Bottom-aligned bars with day initials below
 
