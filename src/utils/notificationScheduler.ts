@@ -8,15 +8,34 @@ import notifee, {
   AndroidImportance,
 } from '@notifee/react-native';
 import type { TimeOfDay } from '../types';
+import { storage } from '../store/mmkv';
 
 const CHANNEL_ID = 'water-reminder';
 const NOTIFICATION_ID_PREFIX = 'water-reminder-';
+const CHANNEL_VERSION = 'channel_v2';
+
+export async function migrateNotificationChannel(): Promise<void> {
+  const currentVersion = storage.getString('notificationChannelVersion');
+  if (currentVersion === CHANNEL_VERSION) return;
+
+  await notifee.cancelAllNotifications();
+  await notifee.deleteChannel(CHANNEL_ID);
+  await notifee.createChannel({
+    id: CHANNEL_ID,
+    name: 'Water Reminders',
+    importance: AndroidImportance.HIGH,
+    sound: 'water_drop',
+  });
+
+  storage.set('notificationChannelVersion', CHANNEL_VERSION);
+}
 
 async function ensureChannel(): Promise<void> {
   await notifee.createChannel({
     id: CHANNEL_ID,
     name: 'Water Reminders',
-    importance: AndroidImportance.DEFAULT,
+    importance: AndroidImportance.HIGH,
+    sound: 'water_drop',
   });
 }
 
