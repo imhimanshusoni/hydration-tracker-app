@@ -94,14 +94,15 @@ npm run ios
 npm run android
 ```
 
-To build a release APK:
+To build a release AAB for Play Store:
 
 ```sh
-npm run android:clean
-cd android && ./gradlew assembleRelease
+npm run android:release
 ```
 
-The APK will be at `android/app/build/outputs/apk/release/app-release.apk`.
+The AAB will be at `android/app/build/outputs/bundle/release/app-release.aab`.
+
+**Prerequisites:** `android/keystore.properties` must exist (gitignored) with the release keystore credentials. See `docs/RELEASING.md` for one-time setup. Without it, the `release` buildType falls back to debug signing — fine for local testing, rejected by Play Store.
 
 ## Project Structure
 
@@ -155,7 +156,7 @@ The app writes widget-readable MMKV keys (`widget:dailyGoal`, `widget:consumed`,
 
 ## Version
 
-1.3.1
+1.4.0
 
 ## License
 
