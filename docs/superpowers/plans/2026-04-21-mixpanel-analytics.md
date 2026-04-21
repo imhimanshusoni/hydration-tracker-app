@@ -188,9 +188,18 @@ Expected: CocoaPods installs `RNDeviceInfo`. `ios/Podfile.lock` updates.
 Create `__mocks__/react-native-device-info.js`:
 
 ```js
+// Plain arrow functions — do NOT wrap in jest.fn() at module top level.
+// Some Jest load paths evaluate manual mocks before the jest global is
+// defined, which throws "jest is not defined". Tests that need to spy
+// should use jest.spyOn(DeviceInfo, 'getVersion') inside the test body.
 module.exports = {
-  getVersion: jest.fn(() => '1.3.2'),
-  getBuildNumber: jest.fn(() => '7'),
+  __esModule: true,
+  default: {
+    getVersion: () => '1.3.2',
+    getBuildNumber: () => '7',
+  },
+  getVersion: () => '1.3.2',
+  getBuildNumber: () => '7',
 };
 ```
 
@@ -620,6 +629,8 @@ export const EVENT_NAMES = [
   'App Backgrounded',
   'Screen Viewed',
   'Onboarding Started',
+  // NOTE: Onboarding is single-screen today — see docs/analytics.md Known gaps
+  // for reintroducing 'Onboarding Step Completed' if multi-step onboarding ships.
   'Onboarding Completed',
   'Water Logged',
   'Log Undone',
@@ -1218,7 +1229,7 @@ async function doInit(): Promise<void> {
 
     const { useUserStore } = require('../../store/useUserStore');
     if (useUserStore.getState().onboardingComplete) {
-      applySyncUserProfile(mapUserProfileToSuperProps(useUserStore.getState()));
+      applySyncUserProfile(mapUserProfileToSuperProps(pickProfileFields(useUserStore.getState())));
     }
 
     initialized = true;
@@ -1241,18 +1252,34 @@ export async function initAnalyticsForBackground(): Promise<void> {
 
 // ----- Sync helpers -----
 
-function mapUserProfileToSuperProps(
-  p: {
-    weight: number;
-    age: number;
-    gender: 'male' | 'female' | 'other';
-    activityLevel: 'sedentary' | 'moderate' | 'active';
-    climatePreference: 'cold' | 'temperate' | 'hot' | 'tropical';
-    wakeUpTime: { hour: number; minute: number };
-    sleepTime: { hour: number; minute: number };
-    dailyGoal: number;
-  },
-): Record<string, unknown> {
+// Narrow shape accepted by mapUserProfileToSuperProps. useUserStore.getState()
+// returns this plus action functions + unrelated state — pickProfileFields
+// below extracts just these 8 fields before handoff.
+type ProfileFields = {
+  weight: number;
+  age: number;
+  gender: 'male' | 'female' | 'other';
+  activityLevel: 'sedentary' | 'moderate' | 'active';
+  climatePreference: 'cold' | 'temperate' | 'hot' | 'tropical';
+  wakeUpTime: { hour: number; minute: number };
+  sleepTime: { hour: number; minute: number };
+  dailyGoal: number;
+};
+
+function pickProfileFields(state: Record<string, unknown>): ProfileFields {
+  return {
+    weight: state.weight as number,
+    age: state.age as number,
+    gender: state.gender as ProfileFields['gender'],
+    activityLevel: state.activityLevel as ProfileFields['activityLevel'],
+    climatePreference: state.climatePreference as ProfileFields['climatePreference'],
+    wakeUpTime: state.wakeUpTime as ProfileFields['wakeUpTime'],
+    sleepTime: state.sleepTime as ProfileFields['sleepTime'],
+    dailyGoal: state.dailyGoal as number,
+  };
+}
+
+function mapUserProfileToSuperProps(p: ProfileFields): Record<string, unknown> {
   const fmt = (t: { hour: number; minute: number }) =>
     `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
   return {
@@ -1317,9 +1344,9 @@ export async function identify(distinctId: string): Promise<void> {
   await mixpanel.identify(distinctId);
 }
 
-export async function alias(alias: string, distinctId?: string): Promise<void> {
+export async function alias(aliasId: string, distinctId?: string): Promise<void> {
   await doInit();
-  await mixpanel.alias(alias, distinctId);
+  await mixpanel.alias(aliasId, distinctId);
 }
 
 export function timeEvent<K extends EventName>(name: K): void {
@@ -1337,9 +1364,7 @@ export function incrementProperty(prop: string, by = 1): void {
   mixpanel.getPeople().increment(prop, by);
 }
 
-export function syncUserProfile(
-  profile: Parameters<typeof mapUserProfileToSuperProps>[0],
-): void {
+export function syncUserProfile(profile: ProfileFields): void {
   const mapped = mapUserProfileToSuperProps(profile);
   if (!initialized) { enqueue({ kind: 'syncUserProfile', profile: mapped }); return; }
   applySyncUserProfile(mapped);
@@ -1368,7 +1393,7 @@ export function optIn(): void {
   syncSessionProperties();
   const { useUserStore } = require('../../store/useUserStore');
   if (useUserStore.getState().onboardingComplete) {
-    syncUserProfile(useUserStore.getState());
+    syncUserProfile(pickProfileFields(useUserStore.getState()));
   }
   const { resetScreenTrackingState } = require('./screenTracking');
   resetScreenTrackingState();
@@ -1486,10 +1511,10 @@ import {
 } from '../client';
 
 function getMixpanelInstance(): jest.Mocked<Mixpanel> {
-  // The Mixpanel class is constructed once at module load — grab the latest instance
-  // by inspecting the mock's constructor calls.
+  // The Mixpanel class is constructed exactly once at module load (singleton in
+  // client.ts). Always instance[0].
   const ctor = Mixpanel as unknown as jest.Mock;
-  return ctor.mock.instances[ctor.mock.instances.length - 1];
+  return ctor.mock.instances[0];
 }
 
 describe('analytics client', () => {
@@ -2488,6 +2513,22 @@ describe('midnight event emission', () => {
     expect(called).toBeDefined();
   });
 
+  it('Day Streak Continued carries the new streak length (3 after 2 prior goal-met days)', () => {
+    // Seed 2 prior goal-met days at -2 and -3. Archive yesterday as goal-met
+    // (3rd). computeStreakExcludingYesterday returns 2; newStreak = 2 + 1 = 3.
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+    useHistoryStore.setState({ snapshots: {
+      [fmt(daysAgo(2))]: { date: fmt(daysAgo(2)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+      [fmt(daysAgo(3))]: { date: fmt(daysAgo(3)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+    }});
+    setYesterday(2400, true); // >= 0.8 * 2800 = 2240
+    useWaterStore.getState().checkMidnightReset();
+    const continued = mockTrack.mock.calls.find(([n]) => n === 'Day Streak Continued');
+    expect(continued).toBeDefined();
+    expect(continued![1]).toMatchObject({ streak_days: 3 });
+  });
+
   it('emits Day Ended Below Goal when below 80% and goalMetFiredToday false', () => {
     setYesterday(2000, false); // 2000 / 2800 = 0.71
     useWaterStore.getState().checkMidnightReset();
@@ -2834,7 +2875,24 @@ Update `checkHealthPermissions` (silent status check, no prompt, no event):
 export async function checkHealthPermissions(): Promise<boolean> {
   let granted = false;
   if (Platform.OS === 'ios') {
-    granted = await iosRequestPermissions(); // HealthKit treats this as silent when already prompted
+    // HealthKit doesn't expose a pure status-only API — requestAuthorization
+    // is a no-op prompt-wise once the user has answered for the given data
+    // types in the current session. We use a lightweight signal: try a sample
+    // query, and if it succeeds we treat permission as granted. If HealthKit
+    // returns an error (denied or not determined), granted stays false. This
+    // avoids a spurious prompt on status checks.
+    try {
+      const { queryQuantitySamples } = require('@kingstinct/react-native-healthkit');
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      await queryQuantitySamples('HKQuantityTypeIdentifierAppleExerciseTime', {
+        unit: 'min',
+        filter: { date: { startDate: startOfDay, endDate: now } },
+      });
+      granted = true;
+    } catch {
+      granted = false;
+    }
   } else if (Platform.OS === 'android') {
     try {
       const { initialize, getGrantedPermissions } = require('react-native-health-connect');
