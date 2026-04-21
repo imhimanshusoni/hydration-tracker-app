@@ -80,7 +80,7 @@ We may update this policy when we add or change features. The "Last updated" dat
 
 For privacy questions, data-deletion requests, or concerns:
 
-**himanshusoni.dev@gmail.com** *(replace with your real contact email before publishing)*
+**engineering@habuild.in**
 
 ---
 

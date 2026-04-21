@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Water Reminder — source icon.
+  Export to PNG at 512×512 for Play Store listing:
+    rsvg-convert -w 512 -h 512 assets/play-store/icon-source.svg > assets/play-store/icon-512.png
+  Or open in Figma / Sketch / Inkscape and export 512×512 PNG.
+
+  Brand tokens (match src/theme.ts):
+    Background navy: #060B18
+    Accent cyan:     #3B9FE3
+    Accent highlight: #79C8F3
+    Warm amber (streak/celebration): #F0A050
+    Text light: #F0F4F8
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Water Reminder app icon">
+  <defs>
+    <linearGradient id="drop" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#79C8F3"/>
+      <stop offset="100%" stop-color="#3B9FE3"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#F0F4F8" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#F0F4F8" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.68" r="0.42">
+      <stop offset="0%" stop-color="#F0A050" stop-opacity="0.16"/>
+      <stop offset="60%" stop-color="#F0A050" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#F0A050" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Navy background -->
+  <rect width="512" height="512" fill="#060B18"/>
+
+  <!-- Subtle amber streak glow (nods to the goal-met ripple) -->
+  <circle cx="256" cy="350" r="210" fill="url(#glow)"/>
+
+  <!-- Water drop -->
+  <path d="M 256 88
+           C 256 88, 156 226, 156 336
+           C 156 401, 201 446, 256 446
+           C 311 446, 356 401, 356 336
+           C 356 226, 256 88, 256 88 Z"
+        fill="url(#drop)"/>
+
+  <!-- Left-side highlight (gives the drop depth) -->
+  <path d="M 210 180
+           C 198 220, 190 268, 200 308
+           Q 216 296, 226 250
+           Q 232 212, 228 180 Z"
+        fill="url(#highlight)"/>
+</svg>
