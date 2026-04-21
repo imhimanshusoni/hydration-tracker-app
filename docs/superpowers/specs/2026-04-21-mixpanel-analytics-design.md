@@ -33,7 +33,7 @@ Both halves are required. Profile edits without re-syncing both sides drift from
 
 System-derived session metadata (platform, `days_since_install`, `current_streak_days`, `has_health_permission`, `streak_rule_version`) is written separately via `syncSessionProperties()`. The split is important: `syncSessionProperties()` is safe to call without a user profile (e.g. on cold start before onboarding completes, or from the Android background VM), while `syncUserProfile()` requires a profile object.
 
-Distinct ID is reset in only one situation: opt-out (see §Opt-out flow). The ID regenerates on app reinstall — that's an accepted analytics limitation of the local-first model.
+Distinct ID is reset only via the code-level `optOut()` → `reset()` path, which has no user-facing trigger today (see §Opt-out flow — no opt-out UI ships). **In shipped behavior, the distinct ID is stable for the install lifetime and regenerates on reinstall.** That's an accepted analytics limitation of the local-first model.
 
 ## File layout
 
@@ -59,7 +59,8 @@ src/config.ts                             export MIXPANEL_TOKEN, MIXPANEL_SERVER
 ## Public API
 
 ```ts
-export function initAnalytics(): Promise<void>;
+export function initAnalytics(): Promise<void>;              // foreground entry — App.tsx
+export function initAnalyticsForBackground(): Promise<void>; // Notifee background handlers
 export function track<K extends EventName>(...args: TrackArgs<K>): void;
 export function identify(distinctId: string): Promise<void>;
 export function alias(alias: string, distinctId?: string): Promise<void>;
@@ -83,27 +84,45 @@ The originally planned `useAnalytics()` hook is dropped. Components import `trac
 
 ## Initialization
 
-### Memoized module-scope promise
+### Two entry points, shared core, memoized promise
 
-`initAnalytics()` returns a memoized `Promise<void>` held at module scope. Any concurrent caller receives the same promise; the actual init work runs exactly once per JS VM lifetime. This prevents a concurrent-init race where (for example) `App.tsx`'s mount effect and the Notifee background handler both invoke `initAnalytics()` simultaneously.
+There are two public entry points:
+
+- `initAnalytics()` — called from `App.tsx`'s mount effect. Foreground path. Awaits `doInit()` then emits `App Opened`.
+- `initAnalyticsForBackground()` — called from Notifee foreground and background handlers. Awaits `doInit()`. Does NOT emit `App Opened`.
+
+Both funnel into a single internal `doInit()` whose work is guarded by a module-scope memoized `Promise<void>`. The actual init work runs exactly once per JS VM lifetime no matter how many entry-point calls occur concurrently.
 
 ```ts
 // client.ts sketch
 let initPromise: Promise<void> | null = null;
-export function initAnalytics(): Promise<void> {
+
+function doInit(): Promise<void> {
   if (initPromise) return initPromise;
-  initPromise = doInit();
+  initPromise = (async () => {
+    // steps 1–10 from §Init sequence below — shared by both entry points
+  })();
   return initPromise;
+}
+
+export async function initAnalytics(): Promise<void> {
+  await doInit();
+  track('App Opened', { days_since_install, session_source });  // foreground-only
+}
+
+export async function initAnalyticsForBackground(): Promise<void> {
+  await doInit();
+  // no App Opened — this is a background notification wakeup, not a user-opened session
 }
 ```
 
+**`App Opened` emission is the foreground entry point's responsibility, not `doInit()`'s.** This matters on iOS, where Notifee handlers and the foreground app share a JS VM: if a background notification handler fires first and calls `initAnalyticsForBackground()`, `doInit()` completes and `initPromise` resolves. When `App.tsx` later mounts and calls `initAnalytics()`, `doInit()` returns the already-resolved promise immediately — but `initAnalytics()` still emits `App Opened` afterward, because the emission lives in the foreground entry point. A design that put `App Opened` inside `doInit()` and gated it with an `isForegroundInit` flag would skip the emission in this exact sequence (iOS: background-then-foreground). Splitting the emission into the entry point is the cleaner mechanism.
+
 ### Android background VM
 
-The Android Notifee background handler runs in a **separate JS VM**. Module state — including `initPromise` — is not shared with the foreground VM. The background VM initializes Mixpanel independently by awaiting its own `initAnalytics()`. The Mixpanel native SDK handles token-level dedup across JS instances (the native layer is a single process-wide singleton keyed by project token), so two JS-side inits don't double-send events.
+The Android Notifee background handler runs in a **separate JS VM**. Module state — including `initPromise` — is not shared with the foreground VM. The background VM initializes Mixpanel independently by awaiting its own `initAnalyticsForBackground()`. The Mixpanel native SDK handles token-level dedup across JS instances (the native layer is a single process-wide singleton keyed by project token), so two JS-side inits don't double-send events.
 
-**`App Opened` is gated on the foreground init path only.** A boolean `isForegroundInit` flag is passed internally; the background init skips the `App Opened` emission. Without this gate, every backgrounded notification delivery on Android would fire a spurious `App Opened`.
-
-### Init sequence (foreground)
+### Init sequence (shared `doInit()` — steps common to both entry points)
 
 ```
  1. optedOut = MMKV.getBoolean('analytics:optedOut') ?? false   // undefined ⇒ opted-in
@@ -120,9 +139,13 @@ The Android Notifee background handler runs in a **separate JS VM**. Module stat
 10. if (useUserStore.getState().onboardingComplete) {
       syncUserProfile(useUserStore.getState().profile)           // user-entered fields
     }
-11. (foreground only) track('App Opened', { days_since_install, session_source })
-12. initialized = true
+11. initialized = true
 ```
+
+After `doInit()` resolves, the caller's entry point runs:
+
+- `initAnalytics()` → `track('App Opened', { days_since_install, session_source })`
+- `initAnalyticsForBackground()` → returns without emitting anything
 
 **`analytics:installedAt` MMKV key survives opt-out and reset.** The opt-out sequence deletes `analytics:optedOut`, and `mixpanel.reset()` clears Mixpanel-side state, but the install timestamp is our own MMKV key owned by the analytics module — we deliberately do not touch it in either path. This keeps `days_since_install` monotonic across opt-out cycles and Mixpanel distinct-ID regenerations. It is wiped only on app uninstall, which is correct (a reinstall is genuinely a new install).
 
@@ -216,7 +239,7 @@ export type EventMap = {
   'App Backgrounded': { foreground_duration_sec: number };
   'Screen Viewed': { screen_name: string; previous_screen: string | null };
   'Onboarding Started': never;
-  'Onboarding Step Completed': { step_name: 'profile' | 'schedule' | 'climate' | 'health_permission' };
+  'Onboarding Step Completed': { step_name: 'profile' | 'schedule' | 'climate' };
   'Onboarding Completed': { duration_sec: number };
   'Water Logged': {
     amount_ml: number;
@@ -517,9 +540,7 @@ The sequence `flush → persist MMKV → optOutTracking → reset` is required i
 
 ## Privacy / PII guard
 
-### No user-facing opt-out toggle ships today
-
-The code-level `optOut()` / `optIn()` / `hasOptedOut()` API exists so a Settings row can be wired later without re-architecting. **Rationale:** anonymous distinct IDs, no PII, no IDFA, local-first data model — there is no backend account to link, no cross-site ID, and no personally identifying property on any event. A toggle without a privacy deficit to toggle against is UX clutter; adding one later is a component + one-line binding. If/when a toggle is added, reintroduce an `Analytics Opted Out` event to the catalog at the same time.
+See §Opt-out flow for the opt-out UI posture.
 
 ### PII guard (dev-only, cost-free in release via `__DEV__` gating)
 
@@ -544,11 +565,13 @@ If this function does not yet exist in `healthService.ts`, add it as part of thi
 - `syncSessionProperties()` calls `getHealthPermissionStatus()` at init time and on opt-in.
 - `healthService` writes the cache and calls `syncSessionProperties()` whenever the permission changes — i.e. after `Health Permission Result` fires.
 
-### Onboarding `health_permission` step
+### Onboarding has no health-permission step today
 
-`Onboarding Step Completed { step_name: 'health_permission' }` fires **regardless of grant outcome** — the user completed the step by answering the prompt, whether they granted or denied. The grant outcome is captured separately via `Health Permission Result { granted: boolean }`. Implementers must not conditionally skip the `Step Completed` emission on denial.
+Verified against `src/screens/OnboardingScreen.tsx`: onboarding is a single-screen form that collects profile + wake/sleep times and requests notification permission (not health permission) on submit. There is no health-permission step, so `'health_permission'` is not a valid `step_name` value and was dropped from the enum in §Event catalog.
 
-Verify during implementation that `OnboardingScreen` actually has a health-permission step; if the current onboarding skips straight from profile → schedule → finish without a health prompt, remove `'health_permission'` from the step_name enum and drop this event.
+Health permission is prompted later — from `SettingsScreen` via `healthService` — and the relevant events there are `Health Permission Prompted` and `Health Permission Result`. Those fire **regardless of grant outcome** (the user answered the prompt either way); `Health Permission Result` carries the `granted: boolean`.
+
+If a multi-step onboarding is introduced later with a dedicated health-permission step, re-add `'health_permission'` to the `step_name` union, fire `Onboarding Step Completed { step_name: 'health_permission' }` on step exit regardless of grant, and keep `Health Permission Result` as the grant-outcome signal.
 
 ## Notifee DELIVERED / PRESS wiring
 
@@ -556,14 +579,16 @@ Both foreground and background handlers need `EventType.DELIVERED` and `EventTyp
 
 ### Foreground (`notifee.onForegroundEvent` in `App.tsx` or a top-level hook)
 
+Use `initAnalyticsForBackground()` here even though this is technically the foreground VM. Reason: `initAnalytics()` emits `App Opened`, which should only fire on a genuine app-open — not on every foregrounded notification delivery. By the time any notification fires in the foreground VM, `App.tsx`'s mount effect has already called `initAnalytics()` and emitted `App Opened`; `initAnalyticsForBackground()` here is a safe idempotent no-op that only guarantees init is resolved before `track()`.
+
 ```
 switch (type) {
   case EventType.DELIVERED:
-    await initAnalytics();                // idempotent via memoized promise
+    await initAnalyticsForBackground();   // idempotent via memoized promise; no App Opened
     track('Reminder Delivered', { scheduled_hour, consumed_ml, goal_ml });
     break;
   case EventType.PRESS:
-    await initAnalytics();
+    await initAnalyticsForBackground();
     track('Reminder Tapped', { scheduled_hour });
     break;
 }
@@ -571,22 +596,30 @@ switch (type) {
 
 ### Background (`notifee.onBackgroundEvent` in `index.js`)
 
-Android spins up a fresh JS VM for the background handler. Required pattern:
+Android spins up a fresh JS VM for the background handler. Two things must happen before `track('Reminder Delivered', …)` can read `consumed_ml` / `goal_ml`:
+
+1. **Analytics init:** `await initAnalyticsForBackground()` — this VM has its own `initPromise`, independent of the foreground.
+2. **Store rehydration:** `await useWaterStore.persist.rehydrate()`. Zustand v5's persist middleware schedules hydration asynchronously when the store module is first evaluated; in a fresh background VM, `useWaterStore.getState().consumed` called before hydration resolves will return the initial default (zero), not the persisted value. `rehydrate()` returns a Promise that resolves once MMKV-backed state is loaded into the store. The foreground VM typically has already hydrated by the time it uses the store, so this is only required in the background path.
+
+Required pattern:
 
 ```
 switch (type) {
   case EventType.DELIVERED:
-    await initAnalytics();                // initializes this VM's Mixpanel
+    await initAnalyticsForBackground();   // initializes this VM's Mixpanel
+    await useWaterStore.persist.rehydrate();  // load persisted consumed/goal before reading
     track('Reminder Delivered', { scheduled_hour, consumed_ml, goal_ml });
     await flush();                        // VM may be torn down immediately after return
     break;
   case EventType.PRESS:
-    await initAnalytics();
-    track('Reminder Tapped', { scheduled_hour });
+    await initAnalyticsForBackground();
+    track('Reminder Tapped', { scheduled_hour });  // no store read needed
     await flush();
     break;
 }
 ```
+
+Rehydrate is only strictly required before reads that depend on persisted store state; `Reminder Tapped` carries only `scheduled_hour` (from the notification payload) so it can skip the rehydrate await. If future events in the background path add payload fields sourced from a persisted store, re-add the await.
 
 Explicit `break;` statements matter here — copy-paste of these cases into an existing switch that already has a fallthrough pattern would silently double-fire `Reminder Tapped` on every `Reminder Delivered` without them.
 
@@ -611,11 +644,13 @@ Unit tests only — no native module interaction.
 
 These tests exercise the analytics module's public API directly — no UI path is involved because no opt-out UI ships. Tests call `optOut()` / `optIn()` as function invocations from the test body.
 
-- `initAnalytics()` resolves once; concurrent callers receive the same promise (spy on `Mixpanel#init` called exactly once for N concurrent `initAnalytics()` calls)
-- Foreground init emits `App Opened`; background init does not
+- `doInit()` runs exactly once across N concurrent calls to `initAnalytics()` and/or `initAnalyticsForBackground()` in the same VM (spy on `Mixpanel#init` called once)
+- `initAnalytics()` emits `App Opened`; `initAnalyticsForBackground()` does not
+- **Ordering regression (iOS single-VM case):** calling `initAnalyticsForBackground()` first, then `initAnalytics()`, still results in exactly one `App Opened` emission — the foreground entry point always emits after `doInit()` resolves, regardless of which entry ran it first
 - `analytics:installedAt` MMKV key is written on first init and is preserved across `optOut()` and `reset()` cycles
 - `drainPreInitQueue()`: 50-event cap with FIFO overflow; 10s timeout discards; queued events dispatch in FIFO order post-init
 - 10s timeout path does NOT flip `analytics:optedOut` in MMKV (regression test for the pre-init-queue wording fix)
+- 10s timeout path does NOT call `mixpanel.optOutTracking()` — the queue drain on timeout is a local in-memory discard, not an SDK-level opt-out (regression test paired with the previous assertion)
 - Opted-out at init → queue discarded via `drainPreInitQueue()`, no `track` spy calls
 - `optOut()` invokes: `mixpanel.flush()` → MMKV true → `optOutTracking()` → `reset()`, in order (flush is load-bearing — asserted via call-order spy)
 - `optIn()` invokes: MMKV delete → `optInTracking()` → `syncSessionProperties()` → `syncUserProfile()` → `resetScreenTrackingState()`, in order
