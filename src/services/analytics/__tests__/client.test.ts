@@ -1,4 +1,7 @@
-import { Mixpanel, __resetMocks } from 'mixpanel-react-native';
+import { Mixpanel } from 'mixpanel-react-native';
+// __resetMocks lives on the jest manual mock; require to bypass type check.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { __resetMocks } = require('mixpanel-react-native');
 
 // Minimal mmkv test shim — attached via jest.mock to avoid the real MMKV native module.
 const mmkvStore: Record<string, unknown> = {};
