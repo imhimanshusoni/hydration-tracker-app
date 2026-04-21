@@ -1,4 +1,4 @@
-package com.waterreminder
+package `in`.habuild.waterreminder
 
 import android.os.Bundle
 import com.facebook.react.ReactActivity

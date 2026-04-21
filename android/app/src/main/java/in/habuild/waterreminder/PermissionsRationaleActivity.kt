@@ -1,4 +1,4 @@
-package com.waterreminder
+package `in`.habuild.waterreminder
 
 import android.app.Activity
 import android.os.Bundle
