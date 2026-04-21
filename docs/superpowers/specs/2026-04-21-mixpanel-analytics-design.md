@@ -39,12 +39,11 @@ Distinct ID is reset in only one situation: opt-out (see §Opt-out flow). The ID
 
 ```
 src/services/analytics/
-  index.ts            public API re-exports
+  index.ts            public API (top-level functions — imported directly; no hook wrapper, see below)
   client.ts           Mixpanel singleton, init, memoized init promise, pre-init queue, lifecycle glue
   events.ts           EVENT_NAMES tuple, EventMap, BaseEventProps, SuperProperties, TrackArgs, PROFILE_UPDATE_ALLOWED_FIELDS
   screenTracking.ts   onStateChange handler, 500ms same-route dedup, resetScreenTrackingState()
   privacy.ts          dev-only PII guard
-  useAnalytics.ts     hook re-export of public API
   __tests__/
     client.test.ts
     events.contract.test.ts
@@ -74,13 +73,13 @@ export function optOut(): void;
 export function hasOptedOut(): Promise<boolean>;
 export function reset(): Promise<void>;
 export function flush(): Promise<void>;
-
-export function useAnalytics(): {
-  track; identify; syncUserProfile; timeEvent; incrementProperty; optIn; optOut;
-};
 ```
 
 `syncUserProfile` is the only public way to tag **user-entered** profile fields — it unconditionally calls both `registerSuperProperties` and `people.set`. `syncSessionProperties` is the counterpart for **system-derived** fields (platform, days_since_install, streak count, health permission, streak_rule_version) and only writes super properties (these are not user-level facts that belong on people profiles).
+
+### No `useAnalytics()` hook
+
+The originally planned `useAnalytics()` hook is dropped. Components import `track`, `timeEvent`, etc. directly from `src/services/analytics`. Rationale: the hook would have been a pure re-export with no reactive state (these functions are fire-and-forget and never affect render output), which is exactly the anti-pattern of "hooks that aren't hooks." The only thing that could justify a hook is reactive opt-out state — and since no opt-out UI ships today (see §Opt-out flow), there's nothing to subscribe to. If a Settings opt-out row is added later, either: (a) read `hasOptedOut()` in a one-shot effect and store in local state, or (b) reintroduce `useAnalytics()` then with genuine subscription behavior. Both are cheap and don't require reshaping the service surface.
 
 ## Initialization
 
@@ -133,6 +132,16 @@ The Android Notifee background handler runs in a **separate JS VM**. Module stat
 
 Both are called on cold start because `mixpanel.reset()` clears super properties and a fresh install has none. Splitting them lets the background VM (which has no user profile context) call `syncSessionProperties()` alone without side-effects on user data.
 
+### `days_since_install` is cold-start-only (intentional tradeoff)
+
+`days_since_install` is computed once at `initAnalytics()` and written to super properties. It is **not** refreshed on `App Foregrounded`.
+
+**What this means:** a session that starts at 11:55 PM on day N and continues past midnight to 12:05 AM on day N+1 will tag all events in that foregrounded session with `days_since_install = N`. Events sent after the user next backgrounds-then-foregrounds (or cold-starts) will correctly tag `N+1`.
+
+**Why not refresh on foreground:** the bias is small (same-session midnight crossings are rare, and off-by-one on the day bucket for at most one session is noise-level for retention analysis). The alternative — recompute on every `App Foregrounded` and `registerSuperProperties` mid-session — adds a native call and a super-property rewrite to every resume for a property that's mostly static within a session. Not worth the overhead.
+
+**When to revisit:** if cohort analysis needs day-level precision for long-session users (e.g. you see a suspiciously high day-0 retention because users leave the app open overnight), add a `App Foregrounded` handler that re-reads `installedAt` and calls `registerSuperProperties({ days_since_install })` if the value changed. The change is additive and doesn't require schema migration.
+
 ### `MIXPANEL_SERVER_URL` handling
 
 Guard against empty strings, not just `undefined`. `react-native-config` returns `""` for unset keys in some configurations. Pattern:
@@ -150,7 +159,7 @@ Calls to `track`, `identify`, `syncUserProfile`, `syncSessionProperties`, `timeE
 Bounds:
 
 - **Capacity:** 50 entries. Overflow is FIFO (oldest dropped). One `console.warn` per overflow burst in `__DEV__`.
-- **Timeout:** 10 seconds from first enqueue. If init hasn't resolved by then, the queue is discarded via `drainPreInitQueue()` in opted-out mode and a `console.warn` fires in `__DEV__`. Subsequent pre-init calls re-enter the same queueing behavior (fresh 10s window).
+- **Timeout:** 10 seconds from first enqueue. If init hasn't resolved by then, the queue is drained without dispatching — the same behavior as the opted-out-at-init path, reusing `drainPreInitQueue()`'s discard branch. This does NOT flip the MMKV opt-out state; it's a timeout safeguard that drops the batch of events that piled up while init hung. A `console.warn` fires in `__DEV__`. Subsequent pre-init calls re-enter the same queueing behavior (fresh 10s window).
 - **Opted-out at init:** `drainPreInitQueue()` discards entries without dispatching; no events are sent; Mixpanel is still initialized so the toggle-back-on path works without a re-init.
 
 ### Naming
@@ -192,7 +201,6 @@ export const EVENT_NAMES = [
   'Activity Sync Completed',
   'Profile Updated',
   'History Viewed',
-  'Analytics Opted Out',
 ] as const;
 
 export type EventName = typeof EVENT_NAMES[number];
@@ -213,9 +221,10 @@ export type EventMap = {
   'Water Logged': {
     amount_ml: number;
     source: 'quick' | 'custom' | 'suggested';
-    /** Device local hour, 0–23. Buckets are computed downstream in Mixpanel rather than on-device so the analyst can redefine
-     * "morning/afternoon/evening" (or any other split) without shipping an app update. DST fall-back means the 1:00–2:00 hour
-     * occurs twice on the transition day; two logs with local_hour=1 and different timestamps is expected and correct. */
+    /** Device local hour, 0–23. NOT UNIQUE WITHIN A DAY on DST fall-back — the 1:00–2:00 local hour occurs twice on the
+     * transition day, so two events with local_hour=1 on the same calendar day is expected; pair with the event timestamp
+     * (Mixpanel's `time` property) for ordering. Buckets ("morning/afternoon/evening" or any other split) are computed
+     * downstream in Mixpanel rather than on-device so the analyst can redefine boundaries without shipping an app update. */
     local_hour: number;
     pct_of_goal_after: number;
     is_first_log_of_day: boolean;
@@ -256,7 +265,6 @@ export type EventMap = {
     // `name` is intentionally excluded — PII
   };
   'History Viewed': { entry_point: 'chart_tap' | 'chart_long_press' };
-  'Analytics Opted Out': never;
 };
 ```
 
@@ -288,9 +296,12 @@ export type SuperProperties = BaseEventProps & {
   days_since_install: number;
   current_streak_days: number;
   has_health_permission: boolean;
-  /** Version tag for streak + Goal Met threshold logic. Bumped whenever the threshold or
-   * streak-continuation rule changes so Mixpanel queries can slice historical vs current semantics.
-   * Current value 'v2_80pct' = 80% of daily goal. See §Streak threshold (v2). */
+  /** Version tag for streak + Goal Met threshold logic. Typed as a string-literal union specifically
+   * so TypeScript fails to compile if GOAL_MET_THRESHOLD (or the streak-continuation predicate)
+   * changes without bumping this tag — the type *forces* the invariant. Adding a new threshold
+   * requires widening the union (e.g. 'v2_80pct' | 'v3_90pct') and setting the correct tag at every
+   * call site, so the compiler refuses to build a drifted state. Current value 'v2_80pct' = 80% of
+   * daily goal. See §Streak threshold (v2). */
   streak_rule_version: 'v2_80pct';
   activity_level?: 'low' | 'moderate' | 'high';
   climate?: 'cold' | 'temperate' | 'hot' | 'tropical';
@@ -378,7 +389,6 @@ Semantics:
 | `Reminder Delivered` / `Reminder Tapped` | Notifee foreground + background handlers |
 | `Health Permission Prompted` / `Result`, `Activity Sync Completed` | `utils/healthService.ts` |
 | `History Viewed` | `WeeklyChart` onPress / onLongPress |
-| `Analytics Opted Out` | emitted immediately before `mixpanel.optOutTracking()` in the opt-out sequence |
 
 ### `goalMetFiredToday` flag on `useWaterStore`
 
@@ -441,7 +451,12 @@ if (goalMetFiredToday) {
 } else if (consumed >= GOAL_MET_THRESHOLD * effectiveGoal) {
   // Met at midnight without a strict-cross event — almost always means the goal was
   // lowered mid-day after consumption already exceeded it. Semantically a goal-change
-  // artifact, not an achievement; emit nothing.
+  // artifact, not an achievement; emit no goal-status event.
+  //
+  // IMPORTANT: this branch does NOT suppress streak events. `Day Streak Continued`
+  // still fires per §Streak events (orthogonal) because the archived day meets the
+  // threshold — the streak counter should continue regardless of how the user got
+  // there. Only the Goal Met / Day Ended Below Goal XOR is suppressed.
 } else {
   track('Day Ended Below Goal', {
     goal_ml, consumed_ml,
@@ -463,17 +478,22 @@ Same `GOAL_MET_THRESHOLD` constant gates streak continuation:
 
 MMKV key: `analytics:optedOut`. **Undefined ≡ opted-in.** Documented in `privacy.ts` and `docs/analytics.md`.
 
-### Opt-out sequence
+### No user-facing opt-out toggle ships today
+
+The `optOut()` / `optIn()` / `hasOptedOut()` code-level API exists, but **no Settings row, onboarding consent step, or other UI is included in this spec**. Rationale: this app is local-first with anonymous distinct IDs, no PII sent, no IDFA usage, no backend account. The privacy posture is already high by construction; a toggle without a privacy deficit to toggle against is UX clutter. The API is kept so a Settings row can be wired later with no re-architecting — only a component and one call site per button.
+
+No `Analytics Opted Out` event exists in the catalog (removed from `EVENT_NAMES` / `EventMap`) because with no UI there is no place to fire it. If a toggle is added later, the implementer decides whether to reintroduce the event.
+
+### Opt-out sequence (API-level — invokable from tests or future UI)
 
 ```
-1. track('Analytics Opted Out')                      // last event this session
-2. await mixpanel.flush()                            // best-effort — see below
-3. MMKV.set('analytics:optedOut', true)
-4. mixpanel.optOutTracking()                         // native SDK deletes unflushed data, removes user info
-5. await mixpanel.reset()                            // new distinct ID for any future opt-in
+1. await mixpanel.flush()                            // LOAD-BEARING — see below
+2. MMKV.set('analytics:optedOut', true)
+3. mixpanel.optOutTracking()                         // deletes any remaining unflushed data
+4. await mixpanel.reset()                            // new distinct ID for any future opt-in
 ```
 
-### Opt-in sequence
+### Opt-in sequence (API-level)
 
 ```
 1. MMKV.delete('analytics:optedOut')                 // undefined ⇒ opted-in
@@ -485,19 +505,23 @@ MMKV key: `analytics:optedOut`. **Undefined ≡ opted-in.** Documented in `priva
 
 Step 5 ensures the first `Screen Viewed` emitted after opt-in has `previous_screen: null`, matching cold-start semantics. Without it, the new distinct ID's first nav event would carry a `previous_screen` value attributed to the opted-out session that just ended — a weird cross-identity data point.
 
-### `flush()` is best-effort
+### `flush()` is load-bearing (NOT best-effort)
 
-`mixpanel.flush()` asks the SDK to upload queued events. It is **not** a guaranteed-delivery fence:
+Per `mixpanel-react-native` v3 docs: **`optOutTracking()` deletes events and people updates that haven't been flushed.** The SDK's own guidance is "Use flush() before calling this method if you want to send all the queues to Mixpanel before." This makes step 1 load-bearing, not a courtesy:
 
-- On flaky networks, events may still be in the SDK's on-disk queue when `flush()` resolves. `optOutTracking()` in step 4 deletes that queue.
-- On Android, process death between steps 2 and 4 can leave events partially uploaded.
-- The worst case is that the final `Analytics Opted Out` event doesn't reach Mixpanel. That's acceptable — it's a courtesy event, not load-bearing.
+- Any events accumulated during the current session that haven't yet uploaded (Mixpanel batches uploads — they don't go one-per-call) will be **destroyed** by step 3 if step 1 is skipped.
+- On flaky networks, `flush()` can fail to reach the server before step 3 runs; that's an acceptable degraded outcome (events lost to the network), but skipping the flush entirely guarantees data loss on every opt-out regardless of network.
+- On Android, process death between steps 1 and 3 remains a risk, but minimizing the window (steps 2 and 3 are synchronous after the flush await) keeps it small.
 
-The sequence is ordered (flush → persist opt-out → native opt-out → reset) to maximize the chance the final event lands, but the system is correct even if it doesn't.
+The sequence `flush → persist MMKV → optOutTracking → reset` is required in this order — do not reorder for "simplicity."
 
 ## Privacy / PII guard
 
-Dev-only, cost-free in release via `__DEV__` gating.
+### No user-facing opt-out toggle ships today
+
+The code-level `optOut()` / `optIn()` / `hasOptedOut()` API exists so a Settings row can be wired later without re-architecting. **Rationale:** anonymous distinct IDs, no PII, no IDFA, local-first data model — there is no backend account to link, no cross-site ID, and no personally identifying property on any event. A toggle without a privacy deficit to toggle against is UX clutter; adding one later is a component + one-line binding. If/when a toggle is added, reintroduce an `Analytics Opted Out` event to the catalog at the same time.
+
+### PII guard (dev-only, cost-free in release via `__DEV__` gating)
 
 - **Key patterns:** `/email|phone|password|^name$/i`
 - **Value patterns:** email-like `[^\s@]+@[^\s@]+\.[^\s@]+` in any string property
@@ -511,10 +535,14 @@ Explicit allowlists:
 
 ### `has_health_permission` super property
 
-Derived from `utils/healthService.ts`. The service must export a synchronous `getHealthPermissionStatus(): boolean` that reads cached permission state (HealthKit on iOS, Health Connect on Android) without prompting. If this function does not yet exist in `healthService.ts`, add it as part of this spec's implementation — the service already has permission prompt + status APIs for each platform, so the shape is a thin aggregation over the platform branches.
+Derived from `utils/healthService.ts`. The service must export a synchronous `getHealthPermissionStatus(): boolean` that returns a **module-scope cached boolean** — not a fresh native query. The cache is maintained by the existing permission-prompt flow: whenever the service prompts for or checks permissions (both of which are already async), it writes the result into the module-scope variable. `getHealthPermissionStatus()` is a pure getter over that variable.
+
+A synchronous signature is required because `syncSessionProperties()` is synchronous and is called from init + opt-in + permission-change paths. Making those async just to await a native query every time would complicate every call site for no functional win — the cached value is as fresh as the last native interaction, which is what we want to report.
+
+If this function does not yet exist in `healthService.ts`, add it as part of this spec's implementation. The existing permission prompt + status APIs already produce the boolean; this adds one module-scope variable and a getter that reads it.
 
 - `syncSessionProperties()` calls `getHealthPermissionStatus()` at init time and on opt-in.
-- `useUserStore` or `healthService` must invalidate the cache (and call `syncSessionProperties()` again) whenever the permission changes — i.e. after `Health Permission Result`.
+- `healthService` writes the cache and calls `syncSessionProperties()` whenever the permission changes — i.e. after `Health Permission Result` fires.
 
 ### Onboarding `health_permission` step
 
@@ -529,11 +557,16 @@ Both foreground and background handlers need `EventType.DELIVERED` and `EventTyp
 ### Foreground (`notifee.onForegroundEvent` in `App.tsx` or a top-level hook)
 
 ```
-case EventType.DELIVERED:
-  await initAnalytics();                // idempotent via memoized promise
-  track('Reminder Delivered', { scheduled_hour, consumed_ml, goal_ml });
-case EventType.PRESS:
-  track('Reminder Tapped', { scheduled_hour });
+switch (type) {
+  case EventType.DELIVERED:
+    await initAnalytics();                // idempotent via memoized promise
+    track('Reminder Delivered', { scheduled_hour, consumed_ml, goal_ml });
+    break;
+  case EventType.PRESS:
+    await initAnalytics();
+    track('Reminder Tapped', { scheduled_hour });
+    break;
+}
 ```
 
 ### Background (`notifee.onBackgroundEvent` in `index.js`)
@@ -541,15 +574,21 @@ case EventType.PRESS:
 Android spins up a fresh JS VM for the background handler. Required pattern:
 
 ```
-case EventType.DELIVERED:
-  await initAnalytics();                // initializes this VM's Mixpanel
-  track('Reminder Delivered', { scheduled_hour, consumed_ml, goal_ml });
-  await flush();                        // VM may be torn down immediately after return
-case EventType.PRESS:
-  await initAnalytics();
-  track('Reminder Tapped', { scheduled_hour });
-  await flush();
+switch (type) {
+  case EventType.DELIVERED:
+    await initAnalytics();                // initializes this VM's Mixpanel
+    track('Reminder Delivered', { scheduled_hour, consumed_ml, goal_ml });
+    await flush();                        // VM may be torn down immediately after return
+    break;
+  case EventType.PRESS:
+    await initAnalytics();
+    track('Reminder Tapped', { scheduled_hour });
+    await flush();
+    break;
+}
 ```
+
+Explicit `break;` statements matter here — copy-paste of these cases into an existing switch that already has a fallthrough pattern would silently double-fire `Reminder Tapped` on every `Reminder Delivered` without them.
 
 `flush()` at the end is important on Android — without it the event sits in the SDK's in-memory queue and is lost when the background VM exits.
 
@@ -570,12 +609,15 @@ Unit tests only — no native module interaction.
 
 ### `client.test.ts`
 
+These tests exercise the analytics module's public API directly — no UI path is involved because no opt-out UI ships. Tests call `optOut()` / `optIn()` as function invocations from the test body.
+
 - `initAnalytics()` resolves once; concurrent callers receive the same promise (spy on `Mixpanel#init` called exactly once for N concurrent `initAnalytics()` calls)
 - Foreground init emits `App Opened`; background init does not
 - `analytics:installedAt` MMKV key is written on first init and is preserved across `optOut()` and `reset()` cycles
 - `drainPreInitQueue()`: 50-event cap with FIFO overflow; 10s timeout discards; queued events dispatch in FIFO order post-init
+- 10s timeout path does NOT flip `analytics:optedOut` in MMKV (regression test for the pre-init-queue wording fix)
 - Opted-out at init → queue discarded via `drainPreInitQueue()`, no `track` spy calls
-- `optOut()` invokes: `mixpanel.flush()` → MMKV true → `optOutTracking()` → `reset()`, in order
+- `optOut()` invokes: `mixpanel.flush()` → MMKV true → `optOutTracking()` → `reset()`, in order (flush is load-bearing — asserted via call-order spy)
 - `optIn()` invokes: MMKV delete → `optInTracking()` → `syncSessionProperties()` → `syncUserProfile()` → `resetScreenTrackingState()`, in order
 - `syncUserProfile(p)` calls both `registerSuperProperties(p)` AND `getPeople().set(p)`
 - `syncSessionProperties()` writes `streak_rule_version: 'v2_80pct'` and does not touch user-entered fields
@@ -591,7 +633,8 @@ Existing `__tests__/waterStoreArchive.test.ts` and `__tests__/useHistoryStore.te
 - Midnight handler: `consumed >= 0.8 * goal` on the archived day → `Day Streak Continued`, and `Day Ended Below Goal` is NOT emitted
 - Midnight handler: `consumed < 0.8 * goal` → `Day Ended Below Goal` IS emitted with `streak_threshold_met: false`
 - `goalMetFiredToday` survives persistence (`partialize`) and is reset at midnight alongside `consumed`
-- `GOAL_MET_THRESHOLD` constant is referenced (not the literal `0.8`) in both `useWaterStore.logWater` and `useHistoryStore.archiveDay` — an AST-level or grep-level check is acceptable (test can read the source and assert no bare `0.8` outside the constant definition)
+
+Behavioral coverage is sufficient here — a test that greps for the literal `0.8` outside the constant definition would only catch accidental duplication, which the 80%/100% behavioral tests already surface; it would also flake any time an unrelated `0.8` is introduced elsewhere (e.g. opacity values, timing multipliers). The behavioral tests are the contract; the constant is an implementation choice.
 
 ### `events.contract.test.ts`
 
@@ -624,8 +667,8 @@ Iterates `EVENT_NAMES` (the single source of truth). Asserts:
 2. How to add a new event — add to `EVENT_NAMES` tuple; add prop shape to `EventMap`; call `track('X', { … })`
 3. How to add a new profile field — add to `UserProfile` + `SuperProperties` + (if non-PII) `PROFILE_UPDATE_ALLOWED_FIELDS`; call `syncUserProfile(profile)` from the edit path
 4. PII rules — never send `name`, emails, phones, freeform user text
-5. Opt-out flow — user-visible toggle in Settings, undefined MMKV key ≡ opted-in
-6. `streak_rule_version` super property — **required documentation.** State the current rule: "`Goal Met` and streak continuation both fire at 80% of daily goal; the `streak_rule_version` super property is set to `v2_80pct`." Explain that this property MUST be bumped (`v3_…`, `v4_…`, etc.) any time `GOAL_MET_THRESHOLD` or the streak-continuation predicate in `useHistoryStore` changes — otherwise Mixpanel queries cannot distinguish historical semantics from current. No backfill is performed on threshold changes; data prior to a version bump is interpreted under its own version's rules.
+5. Opt-out posture — "**No user-facing opt-out toggle ships today; the code-level `optOut()` / `optIn()` / `hasOptedOut()` API exists so a Settings row can be wired later without re-architecting. Rationale: anonymous distinct IDs, no PII, no IDFA, local-first data model.**" Document the MMKV key `analytics:optedOut` (undefined ≡ opted-in), init-time opt-out read, and opted-out-at-init queue-discard behavior. Note that reintroducing a UI toggle means also reintroducing an `Analytics Opted Out` event in the catalog.
+6. `streak_rule_version` super property — **required documentation.** State the current rule: "`Goal Met` and streak continuation both fire at 80% of daily goal; the `streak_rule_version` super property is set to `v2_80pct`." Explain that this property MUST be bumped (`v3_…`, `v4_…`, etc.) any time `GOAL_MET_THRESHOLD` or the streak-continuation predicate in `useHistoryStore` changes — otherwise Mixpanel queries cannot distinguish historical semantics from current. Note the type-level invariant: `streak_rule_version` is a string-literal union so changing the constant without widening the union is a compile error. No backfill is performed on threshold changes; data prior to a version bump is interpreted under its own version's rules.
 7. Debugging — `setLoggingEnabled(__DEV__)` streams events to the Metro logs
 
 ## Out of scope (re-enable paths documented)
