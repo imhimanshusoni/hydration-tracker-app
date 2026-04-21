@@ -114,6 +114,81 @@ describe('checkMidnightReset archives previous day', () => {
   });
 });
 
+describe('midnight event emission', () => {
+  const { track } = require('../src/services/analytics');
+  const mockTrack = track as jest.Mock;
+
+  beforeEach(() => {
+    mockTrack.mockClear();
+    useWaterStore.setState({
+      consumed: 0, lastLoggedAt: null, lastLogAmount: null,
+      date: '', goalCelebratedToday: false, goalMetFiredToday: false,
+    });
+    useGoalStore.setState({ effectiveGoal: 2800, lastActiveMinutes: 0, weatherBonus: 0 });
+    useHistoryStore.setState({ snapshots: {} });
+  });
+
+  function setYesterday(consumed: number, goalMetFiredToday: boolean) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    useWaterStore.setState({ consumed, date: yesterdayStr, goalMetFiredToday });
+  }
+
+  it('emits Day Streak Continued when archived day meets 80%', () => {
+    setYesterday(2300, true);
+    useWaterStore.getState().checkMidnightReset();
+    const called = mockTrack.mock.calls.find(([n]: [string]) => n === 'Day Streak Continued');
+    expect(called).toBeDefined();
+  });
+
+  it('Day Streak Continued carries the new streak length (3 after 2 prior goal-met days)', () => {
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+    useHistoryStore.setState({ snapshots: {
+      [fmt(daysAgo(2))]: { date: fmt(daysAgo(2)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+      [fmt(daysAgo(3))]: { date: fmt(daysAgo(3)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+    }});
+    setYesterday(2400, true);
+    useWaterStore.getState().checkMidnightReset();
+    const continued = mockTrack.mock.calls.find(([n]: [string]) => n === 'Day Streak Continued');
+    expect(continued).toBeDefined();
+    expect(continued![1]).toMatchObject({ streak_days: 3 });
+  });
+
+  it('emits Day Ended Below Goal when below 80% and goalMetFiredToday false', () => {
+    setYesterday(2000, false);
+    useWaterStore.getState().checkMidnightReset();
+    const below = mockTrack.mock.calls.find(([n]: [string]) => n === 'Day Ended Below Goal');
+    expect(below).toBeDefined();
+    expect(below![1]).toMatchObject({ streak_threshold_met: false });
+  });
+
+  it('does NOT emit Day Ended Below Goal when goalMetFiredToday was true', () => {
+    setYesterday(2200, true);
+    useWaterStore.getState().checkMidnightReset();
+    const below = mockTrack.mock.calls.find(([n]: [string]) => n === 'Day Ended Below Goal');
+    expect(below).toBeUndefined();
+  });
+
+  it('emits Day Streak Broken alongside Day Ended Below Goal when prior streak > 0', () => {
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+    useHistoryStore.setState({ snapshots: {
+      [fmt(daysAgo(2))]: { date: fmt(daysAgo(2)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+      [fmt(daysAgo(3))]: { date: fmt(daysAgo(3)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+      [fmt(daysAgo(4))]: { date: fmt(daysAgo(4)), consumed: 2500, effectiveGoal: 2800, goalMet: true, activeMinutes: 0, weatherBonus: 0 },
+    }});
+    setYesterday(1500, false);
+    useWaterStore.getState().checkMidnightReset();
+    const broken = mockTrack.mock.calls.find(([n]: [string]) => n === 'Day Streak Broken');
+    const below = mockTrack.mock.calls.find(([n]: [string]) => n === 'Day Ended Below Goal');
+    expect(broken).toBeDefined();
+    expect(broken![1]).toMatchObject({ previous_streak_days: 3 });
+    expect(below).toBeDefined();
+  });
+});
+
 describe('goalMetFiredToday flag (80% threshold)', () => {
   beforeEach(() => {
     useWaterStore.setState({

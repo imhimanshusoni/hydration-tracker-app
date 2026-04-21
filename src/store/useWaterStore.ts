@@ -18,6 +18,27 @@ function getTodayDate(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+// Computes the streak as of the day before yesterday, i.e. *excluding* the day
+// about to be archived. Required because useHistoryStore.getCurrentStreak()
+// starts at day -1 (yesterday), and yesterday's snapshot does not exist yet
+// at this point — so getCurrentStreak would always return 0 here. By starting
+// at i=2, we read the streak that existed BEFORE the day being archived.
+function computeStreakExcludingYesterday(
+  snapshots: Record<string, { goalMet: boolean }>,
+): number {
+  let streak = 0;
+  const today = new Date();
+  for (let i = 2; i <= 30; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const snap = snapshots[key];
+    if (!snap || !snap.goalMet) break;
+    streak++;
+  }
+  return streak;
+}
+
 interface WaterActions {
   logWater: (amount: number, source?: 'quick' | 'custom' | 'suggested') => void;
   undoLastLog: () => void;
@@ -110,16 +131,49 @@ export const useWaterStore = create<WaterState>()(
         const { useGoalStore } = require('./useGoalStore');
         const goalState = useGoalStore.getState();
         const threshold = GOAL_MET_THRESHOLD * goalState.effectiveGoal;
+        const goalMet = state.consumed >= threshold;
+
+        // Prior streak = streak excluding the day being archived.
+        const priorStreak = computeStreakExcludingYesterday(
+          useHistoryStore.getState().snapshots,
+        );
+
         useHistoryStore.getState().archiveDay({
           date: state.date,
           consumed: state.consumed,
           effectiveGoal: goalState.effectiveGoal,
-          // 80% threshold: streak continuation and historical "goal met"
-          // share GOAL_MET_THRESHOLD.
-          goalMet: state.consumed >= threshold,
+          goalMet,
           activeMinutes: goalState.lastActiveMinutes,
           weatherBonus: goalState.weatherBonus,
         });
+
+        // New streak: if archived day met goal, priorStreak + 1; else 0.
+        const newStreak = goalMet ? priorStreak + 1 : 0;
+
+        // Goal-status event (XOR).
+        if (!state.goalMetFiredToday && !goalMet) {
+          track('Day Ended Below Goal', {
+            goal_ml: goalState.effectiveGoal,
+            consumed_ml: state.consumed,
+            pct_of_goal: goalState.effectiveGoal > 0 ? state.consumed / goalState.effectiveGoal : 0,
+            streak_threshold_met: goalMet, // always false in this branch under v2
+          });
+        }
+
+        // Streak events (orthogonal — can accompany Day Ended Below Goal).
+        if (goalMet) {
+          track('Day Streak Continued', {
+            streak_days: newStreak,
+            goal_ml: goalState.effectiveGoal,
+            consumed_ml: state.consumed,
+          });
+        } else if (priorStreak > 0) {
+          track('Day Streak Broken', {
+            previous_streak_days: priorStreak,
+            goal_ml: goalState.effectiveGoal,
+            consumed_ml: state.consumed,
+          });
+        }
 
         set({
           consumed: 0,
