@@ -73,6 +73,7 @@ export async function scheduleReminders(
         id: `${NOTIFICATION_ID_PREFIX}${hour}`,
         title: 'Water Reminder',
         body: `Time to drink water! You've had ${consumedL}L of ${goalL}L today.`,
+        data: { hour: String(hour) },
         android: {
           channelId: CHANNEL_ID,
           pressAction: { id: 'default' },
