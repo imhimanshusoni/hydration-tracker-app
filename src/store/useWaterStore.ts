@@ -37,8 +37,10 @@ export const useWaterStore = create<WaterState>()(
 
       logWater: (amount) => {
         const now = new Date().toISOString();
-        const newConsumed = get().consumed + amount;
+        const prevConsumed = get().consumed;
+        const newConsumed = prevConsumed + amount;
         const wasCelebrated = get().goalCelebratedToday;
+        const wasGoalMetFired = get().goalMetFiredToday;
         set({
           consumed: newConsumed,
           lastLoggedAt: now,
@@ -47,9 +49,15 @@ export const useWaterStore = create<WaterState>()(
         const { useGoalStore } = require('./useGoalStore');
         const { effectiveGoal } = useGoalStore.getState();
         writeWidgetData(effectiveGoal, newConsumed, now);
-        // Fire celebration on first goal crossing today
+        // Celebration animation: fires on first 100% crossing (UX decision,
+        // orthogonal to analytics 80% threshold).
         if (!wasCelebrated && newConsumed >= effectiveGoal) {
           set({ goalCelebratedToday: true });
+        }
+        // Goal Met analytics flag: strict-cross of 80% of effectiveGoal, once per day.
+        const threshold = GOAL_MET_THRESHOLD * effectiveGoal;
+        if (!wasGoalMetFired && prevConsumed < threshold && newConsumed >= threshold) {
+          set({ goalMetFiredToday: true });
         }
       },
 
@@ -70,33 +78,34 @@ export const useWaterStore = create<WaterState>()(
       checkMidnightReset: () => {
         const today = getTodayDate();
         const state = get();
-        if (state.date !== today && state.date !== '') {
-          // Archive yesterday's data before resetting
-          const { useHistoryStore } = require('./useHistoryStore');
-          const { useGoalStore } = require('./useGoalStore');
-          const goalState = useGoalStore.getState();
-          useHistoryStore.getState().archiveDay({
-            date: state.date,
-            consumed: state.consumed,
-            effectiveGoal: goalState.effectiveGoal,
-            goalMet: state.consumed >= goalState.effectiveGoal,
-            activeMinutes: goalState.lastActiveMinutes,
-            weatherBonus: goalState.weatherBonus,
-          });
+        if (state.date === today || state.date === '') return;
 
-          set({
-            consumed: 0,
-            lastLoggedAt: null,
-            lastLogAmount: null,
-            date: today,
-            goalCelebratedToday: false,
-          });
-          // Reset and recalculate the smart goal for the new day.
-          // recalculateMorningGoal handles widget data write after async completion.
-          const goalStore = useGoalStore.getState();
-          goalStore.resetDaily();
-          goalStore.recalculateMorningGoal();
-        }
+        const { useHistoryStore } = require('./useHistoryStore');
+        const { useGoalStore } = require('./useGoalStore');
+        const goalState = useGoalStore.getState();
+        const threshold = GOAL_MET_THRESHOLD * goalState.effectiveGoal;
+        useHistoryStore.getState().archiveDay({
+          date: state.date,
+          consumed: state.consumed,
+          effectiveGoal: goalState.effectiveGoal,
+          // 80% threshold: streak continuation and historical "goal met"
+          // share GOAL_MET_THRESHOLD.
+          goalMet: state.consumed >= threshold,
+          activeMinutes: goalState.lastActiveMinutes,
+          weatherBonus: goalState.weatherBonus,
+        });
+
+        set({
+          consumed: 0,
+          lastLoggedAt: null,
+          lastLogAmount: null,
+          date: today,
+          goalCelebratedToday: false,
+          goalMetFiredToday: false,
+        });
+        const goalStore = useGoalStore.getState();
+        goalStore.resetDaily();
+        goalStore.recalculateMorningGoal();
       },
     }),
     {

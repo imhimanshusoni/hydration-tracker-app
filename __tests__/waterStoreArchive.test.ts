@@ -64,11 +64,29 @@ describe('checkMidnightReset archives previous day', () => {
     expect(snapshots[yesterdayStr]).toBeDefined();
     expect(snapshots[yesterdayStr].consumed).toBe(2500);
     expect(snapshots[yesterdayStr].effectiveGoal).toBe(2800);
-    expect(snapshots[yesterdayStr].goalMet).toBe(false);
+    // Under v2_80pct: 2500 / 2800 = 0.893 > 0.8, so goalMet is true.
+    expect(snapshots[yesterdayStr].goalMet).toBe(true);
     expect(snapshots[yesterdayStr].activeMinutes).toBe(45);
     expect(snapshots[yesterdayStr].weatherBonus).toBe(200);
 
     expect(useWaterStore.getState().consumed).toBe(0);
+  });
+
+  it('archives goalMet=false when consumed below 80% of effectiveGoal', () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    useWaterStore.setState({
+      consumed: 2000, // 2000 / 2800 = 0.714, below 0.8
+      date: yesterdayStr,
+    });
+    useGoalStore.setState({ effectiveGoal: 2800, lastActiveMinutes: 0, weatherBonus: 0 });
+
+    useWaterStore.getState().checkMidnightReset();
+
+    const { snapshots } = useHistoryStore.getState();
+    expect(snapshots[yesterdayStr].goalMet).toBe(false);
   });
 
   it('does not archive when date has not changed', () => {
@@ -84,5 +102,50 @@ describe('checkMidnightReset archives previous day', () => {
 
     const { snapshots } = useHistoryStore.getState();
     expect(Object.keys(snapshots)).toHaveLength(0);
+  });
+});
+
+describe('goalMetFiredToday flag (80% threshold)', () => {
+  beforeEach(() => {
+    useWaterStore.setState({
+      consumed: 0,
+      lastLoggedAt: null,
+      lastLogAmount: null,
+      date: '',
+      goalCelebratedToday: false,
+      goalMetFiredToday: false,
+    });
+    useGoalStore.setState({ effectiveGoal: 2800, lastActiveMinutes: 30, weatherBonus: 200 });
+  });
+
+  it('sets goalMetFiredToday to true on strict-cross of 80% (2800 * 0.8 = 2240)', () => {
+    useWaterStore.setState({ consumed: 2200 });
+    useWaterStore.getState().logWater(100); // 2300 >= 2240, prev 2200 < 2240
+    expect(useWaterStore.getState().goalMetFiredToday).toBe(true);
+  });
+
+  it('does not set goalMetFiredToday at 79% (2211 / 2800 = 0.789)', () => {
+    useWaterStore.setState({ consumed: 2100 });
+    useWaterStore.getState().logWater(100); // 2200, below 2240
+    expect(useWaterStore.getState().goalMetFiredToday).toBe(false);
+  });
+
+  it('does not re-fire goalMetFiredToday once set (second crossing attempt)', () => {
+    useWaterStore.setState({ consumed: 2300, goalMetFiredToday: true });
+    useWaterStore.getState().logWater(500);
+    expect(useWaterStore.getState().goalMetFiredToday).toBe(true);
+  });
+
+  it('resets goalMetFiredToday on midnight reset', () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    useWaterStore.setState({
+      consumed: 2500,
+      date: yesterdayStr,
+      goalMetFiredToday: true,
+    });
+    useWaterStore.getState().checkMidnightReset();
+    expect(useWaterStore.getState().goalMetFiredToday).toBe(false);
   });
 });
