@@ -51,6 +51,9 @@ export interface WaterDay {
   lastLogAmount: number | null; // ml, for undo
   date: string; // YYYY-MM-DD
   goalCelebratedToday: boolean;
+  // Fires exactly once per day when consumption strict-crosses GOAL_MET_THRESHOLD
+  // of effectiveGoal. Gates analytics Goal Met emission.
+  goalMetFiredToday: boolean;
 }
 
 export interface DailySnapshot {

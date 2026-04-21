@@ -6,6 +6,12 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
 import type { WaterDay } from '../types';
 
+// Fraction of effectiveGoal that counts as "goal met" for analytics Goal Met
+// emission and streak continuation. Changing this value requires bumping
+// streak_rule_version in src/services/analytics/events.ts in the same commit —
+// the string-literal union makes a mismatch a compile error.
+export const GOAL_MET_THRESHOLD = 0.8;
+
 function getTodayDate(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -27,6 +33,7 @@ export const useWaterStore = create<WaterState>()(
       lastLogAmount: null,
       date: getTodayDate(),
       goalCelebratedToday: false,
+      goalMetFiredToday: false,
 
       logWater: (amount) => {
         const now = new Date().toISOString();
@@ -101,6 +108,7 @@ export const useWaterStore = create<WaterState>()(
         lastLogAmount: state.lastLogAmount,
         date: state.date,
         goalCelebratedToday: state.goalCelebratedToday,
+        goalMetFiredToday: state.goalMetFiredToday,
       }),
     },
   ),
