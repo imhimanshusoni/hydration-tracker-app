@@ -4,7 +4,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useHistoryStore, computeCurrentStreak } from '../store/useHistoryStore';
-import { useWaterStore } from '../store/useWaterStore';
+import { useWaterStore, GOAL_MET_THRESHOLD } from '../store/useWaterStore';
 import { useGoalStore } from '../store/useGoalStore';
 import type { AppTheme } from '../theme';
 import { Fonts } from '../fonts';
@@ -20,7 +20,10 @@ export function StreakCounter({ theme }: StreakCounterProps) {
 
   const historicalStreak = useMemo(() => computeCurrentStreak(snapshots), [snapshots]);
 
-  const todayMet = effectiveGoal > 0 && consumed >= effectiveGoal;
+  // Match the archive/streak-continuation threshold (80%) so the live display
+  // agrees with what will be written to history at midnight. Using 100% here
+  // would under-report the streak today, then over-correct tomorrow.
+  const todayMet = effectiveGoal > 0 && consumed >= GOAL_MET_THRESHOLD * effectiveGoal;
   const streak = historicalStreak + (todayMet ? 1 : 0);
 
   if (streak === 0) return null;

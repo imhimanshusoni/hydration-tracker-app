@@ -5,7 +5,7 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import { useHistoryStore, computeLast7Days } from '../store/useHistoryStore';
-import { useWaterStore } from '../store/useWaterStore';
+import { useWaterStore, GOAL_MET_THRESHOLD } from '../store/useWaterStore';
 import { useGoalStore } from '../store/useGoalStore';
 import type { AppTheme } from '../theme';
 import type { DailySnapshot } from '../types';
@@ -52,7 +52,7 @@ export function WeeklyChart({ theme }: WeeklyChartProps) {
     date: '',
     consumed,
     effectiveGoal,
-    goalMet: effectiveGoal > 0 && consumed >= effectiveGoal,
+    goalMet: effectiveGoal > 0 && consumed >= GOAL_MET_THRESHOLD * effectiveGoal,
     activeMinutes: 0,
     weatherBonus: 0,
   };

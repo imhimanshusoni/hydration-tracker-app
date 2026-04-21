@@ -60,7 +60,7 @@ export interface DailySnapshot {
   date: string; // "YYYY-MM-DD"
   consumed: number; // ml, final value at end of day
   effectiveGoal: number; // ml, effective goal at time of archive
-  goalMet: boolean; // consumed >= effectiveGoal
+  goalMet: boolean; // consumed >= GOAL_MET_THRESHOLD * effectiveGoal (v2_80pct: 80%)
   activeMinutes: number; // from Health Connect/HealthKit
   weatherBonus: number; // ml
 }
