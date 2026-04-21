@@ -163,6 +163,46 @@ git commit -m "test: stub MIXPANEL_TOKEN in react-native-config mock"
 
 ---
 
+## Task 3.5: Install `react-native-device-info`
+
+**Files:**
+- Modify: `package.json`
+- Modify: `ios/Podfile.lock`
+
+`baseEventProps()` needs real `app_version` and `build_number` values — not hardcoded strings. `react-native-device-info` exposes `getVersion()` and `getBuildNumber()` with no config required.
+
+- [ ] **Step 1: Install**
+
+Run: `npm i react-native-device-info`
+
+Expected: adds to `package.json`, no errors.
+
+- [ ] **Step 2: Pod install**
+
+Run: `cd ios && pod install && cd ..`
+
+Expected: CocoaPods installs `RNDeviceInfo`. `ios/Podfile.lock` updates.
+
+- [ ] **Step 3: Add Jest mock**
+
+Create `__mocks__/react-native-device-info.js`:
+
+```js
+module.exports = {
+  getVersion: jest.fn(() => '1.3.2'),
+  getBuildNumber: jest.fn(() => '7'),
+};
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add package.json package-lock.json ios/Podfile.lock __mocks__/react-native-device-info.js
+git commit -m "chore: add react-native-device-info for app version + build number"
+```
+
+---
+
 ## Task 4: Create `__mocks__/mixpanel-react-native.js`
 
 **Files:**
@@ -580,7 +620,6 @@ export const EVENT_NAMES = [
   'App Backgrounded',
   'Screen Viewed',
   'Onboarding Started',
-  'Onboarding Step Completed',
   'Onboarding Completed',
   'Water Logged',
   'Log Undone',
@@ -617,7 +656,6 @@ export type EventMap = {
   'App Backgrounded': { foreground_duration_sec: number };
   'Screen Viewed': { screen_name: string; previous_screen: string | null };
   'Onboarding Started': never;
-  'Onboarding Step Completed': { step_name: 'profile' | 'schedule' | 'climate' };
   'Onboarding Completed': { duration_sec: number };
   'Water Logged': {
     amount_ml: number;
@@ -629,7 +667,7 @@ export type EventMap = {
     is_first_log_of_day: boolean;
   };
   'Log Undone': { amount_ml: number; time_since_log_sec: number };
-  'Goal Met': { goal_ml: number; consumed_ml: number; log_count: number; time_to_goal_sec: number };
+  'Goal Met': { goal_ml: number; consumed_ml: number };
   'Day Streak Continued': { streak_days: number; goal_ml: number; consumed_ml: number };
   'Day Streak Broken': { previous_streak_days: number; goal_ml: number; consumed_ml: number };
   'Day Ended Below Goal': {
@@ -775,11 +813,10 @@ const SAMPLE_PROPS: { [K in keyof EventMap]: EventMap[K] extends never ? null : 
   'App Backgrounded': { foreground_duration_sec: 0 },
   'Screen Viewed': { screen_name: 'Home', previous_screen: null },
   'Onboarding Started': null as never,
-  'Onboarding Step Completed': { step_name: 'profile' },
   'Onboarding Completed': { duration_sec: 0 },
   'Water Logged': { amount_ml: 0, source: 'quick', local_hour: 0, pct_of_goal_after: 0, is_first_log_of_day: true },
   'Log Undone': { amount_ml: 0, time_since_log_sec: 0 },
-  'Goal Met': { goal_ml: 0, consumed_ml: 0, log_count: 0, time_to_goal_sec: 0 },
+  'Goal Met': { goal_ml: 0, consumed_ml: 0 },
   'Day Streak Continued': { streak_days: 0, goal_ml: 0, consumed_ml: 0 },
   'Day Streak Broken': { previous_streak_days: 0, goal_ml: 0, consumed_ml: 0 },
   'Day Ended Below Goal': { goal_ml: 0, consumed_ml: 0, pct_of_goal: 0, streak_threshold_met: false },
@@ -1014,9 +1051,9 @@ Create `src/services/analytics/client.ts`:
 // bounded pre-init queue, and the public API surface exported from ./index.ts.
 // See docs/superpowers/specs/2026-04-21-mixpanel-analytics-design.md.
 
-import { Platform, AppState } from 'react-native';
+import { Platform } from 'react-native';
 import { Mixpanel } from 'mixpanel-react-native';
-import DeviceInfo from 'react-native'; // placeholder — we don't add a dep; see version/build below
+import DeviceInfo from 'react-native-device-info';
 import { mmkv } from '../../store/mmkv';
 import { MIXPANEL_TOKEN, MIXPANEL_SERVER_URL } from '../../config';
 import {
@@ -1093,6 +1130,11 @@ export function drainPreInitQueue(opts: { discard: boolean }): void {
   for (const call of toFlush) dispatch(call);
 }
 
+// Uses raw mixpanel instance methods (not the public `track` / `identify` / etc.
+// exports) because during queue drainage `initialized` is still false — the
+// public API would re-enqueue, causing infinite recursion. This function runs
+// only from the init path after `mixpanel.init()` resolves but before
+// `initialized = true` is set.
 function dispatch(call: QueuedCall): void {
   switch (call.kind) {
     case 'track': {
@@ -1124,12 +1166,9 @@ function dispatch(call: QueuedCall): void {
 // ----- Base / session props -----
 
 function baseEventProps(): { app_version: string; build_number: string } {
-  // We intentionally don't add a new native dep — react-native-config or a future
-  // DeviceInfo module can provide these. For now, static placeholders that a follow-up
-  // task wires to real values. (This is documented as a deferred concrete-value wiring.)
   return {
-    app_version: '1.3.2',
-    build_number: '7',
+    app_version: DeviceInfo.getVersion(),
+    build_number: DeviceInfo.getBuildNumber(),
   };
 }
 
@@ -1360,11 +1399,7 @@ export function __resetForTests(): void {
 }
 ```
 
-- [ ] **Step 2: Replace `DeviceInfo` placeholder import — remove it**
-
-The line `import DeviceInfo from 'react-native';` is a placeholder that does nothing useful. Delete it. Real app_version / build_number wiring is deferred — the static `'1.3.2' / '7'` values in `baseEventProps()` are the ship value; tomorrow's task can replace with a native read.
-
-- [ ] **Step 3: Check `src/store/mmkv.ts` exports `mmkv`**
+- [ ] **Step 2: Check `src/store/mmkv.ts` exports `mmkv`**
 
 Run: `grep -n "export" src/store/mmkv.ts`
 
@@ -1378,13 +1413,13 @@ Adjust the import line at the top of `client.ts` to match the real exported name
 
 If only `zustandStorage` is exported, export the raw MMKV instance as well from `src/store/mmkv.ts` (add `export const mmkv = <the instance>`) and import from there.
 
-- [ ] **Step 4: TypeScript check**
+- [ ] **Step 3: TypeScript check**
 
 Run: `npx tsc --noEmit`
 
 Expected: exit 0. If errors, fix imports / type references inline.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/services/analytics/client.ts src/store/mmkv.ts
@@ -1843,6 +1878,60 @@ git commit -m "feat(analytics): public API index"
 
 # Phase 3 — Wire the service into the app shell
 
+## Task 17.5: Attach `hour` to scheduled notification payloads
+
+**Files:**
+- Modify: `src/utils/notificationScheduler.ts`
+
+`Reminder Delivered` / `Reminder Tapped` events carry `scheduled_hour`. Today the scheduler encodes the hour only in the notification ID (`water-reminder-{hour}`); `notification.data` is empty. Adding `data: { hour }` to every scheduled notification is the clean solution and doesn't affect existing consumers (the ID still works for cancel-by-prefix).
+
+- [ ] **Step 1: Attach `data.hour` to each trigger notification**
+
+In `src/utils/notificationScheduler.ts`, inside `scheduleReminders` replace the `createTriggerNotification` call with:
+
+```ts
+await notifee.createTriggerNotification(
+  {
+    id: `${NOTIFICATION_ID_PREFIX}${hour}`,
+    title: 'Water Reminder',
+    body: `Time to drink water! You've had ${consumedL}L of ${goalL}L today.`,
+    data: { hour: String(hour) },
+    android: {
+      channelId: CHANNEL_ID,
+      pressAction: { id: 'default' },
+    },
+    ios: {
+      sound: 'water_drop.wav',
+      interruptionLevel: 'timeSensitive',
+      foregroundPresentationOptions: {
+        sound: true,
+        banner: true,
+        list: true,
+        badge: true,
+      },
+    },
+  },
+  trigger,
+);
+```
+
+Notifee's `data` field requires string values (native bridge constraint), hence `String(hour)`. Parsed back to a number in the handler via `parseInt`.
+
+- [ ] **Step 2: Type-check**
+
+Run: `npx tsc --noEmit`
+
+Expected: exit 0.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/utils/notificationScheduler.ts
+git commit -m "feat(reminders): attach hour to notification data payload"
+```
+
+---
+
 ## Task 18: Initialize analytics from `App.tsx`
 
 **Files:**
@@ -2058,8 +2147,19 @@ import {
 
 // Android may spin up a fresh JS VM for the background handler. Analytics init
 // and Zustand persist rehydration must complete before reading store state.
-// iOS typically runs this in the foreground VM, where rehydration is already
-// done and initAnalyticsForBackground() is a cheap no-op (memoized promise).
+//
+// persist.rehydrate() is LOAD-BEARING on fresh VMs, not merely defensive:
+// useWaterStore uses createJSONStorage(() => zustandStorage), whose interface
+// is async. Even though MMKV itself is synchronous, the persist middleware
+// schedules hydration asynchronously (microtask). Calling useWaterStore.getState()
+// immediately after module load returns the initial defaults, not the persisted
+// values. Awaiting rehydrate() is the only way to guarantee persisted state
+// is loaded before we read consumed / goal.
+//
+// iOS typically runs this in the foreground VM, where rehydration completed
+// during app startup and initAnalyticsForBackground() is a cheap no-op (memoized
+// promise). The rehydrate() await is still safe there — Zustand treats repeat
+// calls as idempotent.
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type !== EventType.DELIVERED && type !== EventType.PRESS) return;
 
@@ -2139,13 +2239,12 @@ import { track } from '../services/analytics';
 Then replace the `logWater` implementation again (this supersedes Task 7 — adds the emissions):
 
 ```ts
-logWater: (amount) => {
+logWater: (amount, source) => {
   const now = new Date().toISOString();
   const prevConsumed = get().consumed;
   const newConsumed = prevConsumed + amount;
   const wasCelebrated = get().goalCelebratedToday;
   const wasGoalMetFired = get().goalMetFiredToday;
-  const logStartToday = (get() as any).__firstLogAtMs ?? Date.now();
 
   set({
     consumed: newConsumed,
@@ -2169,7 +2268,7 @@ logWater: (amount) => {
 
   track('Water Logged', {
     amount_ml: amount,
-    source: 'quick', // call-site refinement in logWater overload wrapper (see note below)
+    source: source ?? 'quick',
     local_hour: new Date().getHours(),
     pct_of_goal_after: effectiveGoal > 0 ? newConsumed / effectiveGoal : 0,
     is_first_log_of_day: prevConsumed === 0,
@@ -2179,26 +2278,15 @@ logWater: (amount) => {
     track('Goal Met', {
       goal_ml: effectiveGoal,
       consumed_ml: newConsumed,
-      log_count: 0, // log count per day is not tracked in the store today; use 0 until added
-      time_to_goal_sec: 0, // same — deferred unless a per-day timer exists
     });
   }
 },
 ```
 
-**Note on `source`:** `useWaterStore.logWater(amount)` has no `source` argument today. Either:
+**Signature change required.** `useWaterStore.logWater(amount)` has no `source` argument today. Widen it: `logWater(amount: number, source?: 'quick' | 'custom' | 'suggested')` and default to `'quick'` in the body. Update both call sites:
 
-(a) Widen the signature: `logWater(amount, source?: 'quick' | 'custom' | 'suggested')` and default to `'quick'`. Update the two call sites in `src/screens/HomeScreen.tsx` and `src/components/LogWaterModal.tsx` to pass the source.
-
-(b) Keep the hardcoded `'quick'` and accept that the `source` dimension is degenerate until the log sites are updated in a follow-up.
-
-**Choose (a).** Update the function signature:
-
-```ts
-logWater: (amount: number, source?: 'quick' | 'custom' | 'suggested') => void;
-```
-
-and inside the body use `source: source ?? 'quick'`. Then update the two call sites — in `HomeScreen.tsx` quick-log tap passes `'quick'`, in `LogWaterModal.tsx` custom amount passes `'custom'`.
+- `src/screens/HomeScreen.tsx`: quick-log button taps pass `'quick'`.
+- `src/components/LogWaterModal.tsx`: custom-amount submit passes `'custom'`.
 
 - [ ] **Step 2: Update `WaterActions` interface**
 
@@ -2277,6 +2365,28 @@ git commit -m "feat: emit Water Logged, Goal Met, Log Undone from water store"
 In `src/store/useWaterStore.ts`, replace `checkMidnightReset` with:
 
 ```ts
+// Computes the streak as of the day before yesterday, i.e. *excluding* the day
+// about to be archived. Required because useHistoryStore.getCurrentStreak()
+// starts at day -1 (yesterday), and yesterday's snapshot does not exist yet
+// at this point — so getCurrentStreak would always return 0 here. By starting
+// at i=2, we read the streak that existed BEFORE the day being archived.
+function computeStreakExcludingYesterday(
+  snapshots: Record<string, { goalMet: boolean }>,
+): number {
+  let streak = 0;
+  const today = new Date();
+  for (let i = 2; i <= 30; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const snap = snapshots[key];
+    if (!snap || !snap.goalMet) break;
+    streak++;
+  }
+  return streak;
+}
+
+// ... inside the store definition:
 checkMidnightReset: () => {
   const today = getTodayDate();
   const state = get();
@@ -2288,8 +2398,8 @@ checkMidnightReset: () => {
   const threshold = GOAL_MET_THRESHOLD * goalState.effectiveGoal;
   const goalMet = state.consumed >= threshold;
 
-  // Capture prior streak BEFORE archiving (archive will increment it).
-  const priorStreak = useHistoryStore.getState().getCurrentStreak();
+  // Prior streak = streak excluding the day being archived.
+  const priorStreak = computeStreakExcludingYesterday(useHistoryStore.getState().snapshots);
 
   useHistoryStore.getState().archiveDay({
     date: state.date,
@@ -2300,7 +2410,9 @@ checkMidnightReset: () => {
     weatherBonus: goalState.weatherBonus,
   });
 
-  const newStreak = useHistoryStore.getState().getCurrentStreak();
+  // New streak = streak after adding yesterday's snapshot. If goalMet: priorStreak + 1.
+  // If not goalMet: 0 (the chain broke).
+  const newStreak = goalMet ? priorStreak + 1 : 0;
 
   // Goal-status event (XOR).
   if (!state.goalMetFiredToday && !goalMet) {
@@ -2393,7 +2505,10 @@ describe('midnight event emission', () => {
   });
 
   it('emits Day Streak Broken alongside Day Ended Below Goal when prior streak > 0', () => {
-    // Seed a 3-day streak
+    // Prior streak is read via computeStreakExcludingYesterday, which iterates
+    // starting at day -2 (skipping the day being archived at -1). Seed -2, -3, -4
+    // as goalMet:true to produce priorStreak = 3. Do NOT seed day -1; the midnight
+    // handler archives it with goalMet:false in this test.
     const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
     useHistoryStore.setState({ snapshots: {
@@ -2406,6 +2521,7 @@ describe('midnight event emission', () => {
     const broken = mockTrack.mock.calls.find(([n]) => n === 'Day Streak Broken');
     const below = mockTrack.mock.calls.find(([n]) => n === 'Day Ended Below Goal');
     expect(broken).toBeDefined();
+    expect(broken![1]).toMatchObject({ previous_streak_days: 3 });
     expect(below).toBeDefined();
   });
 });
@@ -2952,6 +3068,16 @@ The version tag is typed as a string-literal union in `SuperProperties`. This is
 `setLoggingEnabled(__DEV__)` is called during init. Events stream to the Metro logs in development builds.
 
 To verify events from a dev build, filter Metro console output for `Mixpanel` or run with `npx react-native log-android` / `npx react-native log-ios`.
+
+## Known gaps (tracked for follow-up)
+
+These are deliberate omissions today — surfaced here so they don't become invisible tech debt:
+
+- **`Goal Met` has no `log_count` or `time_to_goal_sec` properties.** The store does not track per-day log count or first-log-of-day timestamp. When those fields are added to `useWaterStore`, extend the `Goal Met` event payload in `EventMap` and the emission site. No version bump is needed because adding optional properties is additive.
+- **`Activity Sync Completed.bump_ml` is always 0.** The goal formula computes the bump inside `useGoalStore.applyActivityBump`, not in `healthService.getTodayActiveMinutes`. The analytics emission lives in the wrong layer to know the bump value. Either move the emission into `useGoalStore.applyActivityBump` (preferred) or plumb the computed bump back through the health service.
+- **Per-step onboarding events are not emitted.** The onboarding is a single-screen form; `Onboarding Step Completed` was dropped from the catalog entirely. If multi-step onboarding ships later, re-add the event to `EVENT_NAMES`/`EventMap` and wire per-step emissions.
+- **`scheduled_hour = -1` sentinel.** If a Notifee event delivers without `data.hour` (e.g. a notification scheduled before the `data` payload change in Task 17.5), `parseReminderHour` returns `-1`. Treat as "hour unknown" in Mixpanel queries; this becomes non-zero only after users update to the new build.
+- **No opt-out UI.** The code-level `optOut` / `optIn` / `hasOptedOut` API exists but no Settings toggle ships today. See the "Opt-out posture" section above.
 ```
 
 - [ ] **Step 2: Commit**
@@ -3016,6 +3142,7 @@ In the Mixpanel project's Live View, confirm:
 - [ ] When a notification is delivered with the app in foreground, `Reminder Delivered` fires with `consumed_ml` and `goal_ml`
 - [ ] When a notification is delivered with the app backgrounded/killed (Android), `Reminder Delivered` still fires (verify in Mixpanel after returning to the app; allow up to 60 seconds for the background flush to reach the server)
 - [ ] Allowing Health permission fires `Health Permission Prompted` then `Health Permission Result` with `granted: true`
+- [ ] **Split-init end-to-end:** force-stop the Android app, wait for a scheduled reminder to fire while the app is not running, and confirm in Mixpanel that `Reminder Delivered` was emitted but NO `App Opened` fired from that background wakeup. Only the next cold-start of the app UI should emit `App Opened`.
 - [ ] No event has a property value containing an email or the user's `name`
 
 - [ ] **Step 4: Report results to the human reviewer**
@@ -3027,7 +3154,7 @@ If every box is ticked, the plan is complete. If any item fails, capture the eve
 # Self-review (from the writing-plans skill)
 
 **Spec coverage — every section maps to at least one task:**
-- §Identification model → Tasks 14, 22 (syncUserProfile from onboarding + updateProfile)
+- §Identification model → Tasks 14, 22, 26 (syncUserProfile from onboarding + updateProfile)
 - §File layout → Tasks 10–17 (all files created)
 - §Public API → Tasks 14, 17
 - §Init (memoized + split entry points + Android VM) → Tasks 14, 18, 19
@@ -3048,11 +3175,11 @@ If every box is ticked, the plan is complete. If any item fails, capture the eve
 - §Privacy / PII guard → Tasks 12, 13, 22
 - §Health-permission signal & onboarding → Task 25
 - §Onboarding has no health-permission step → Task 10 (enum excludes it), Task 26
-- §Notifee DELIVERED / PRESS wiring → Tasks 18, 19
-- §Dependencies / platform config → Tasks 1–4
+- §Notifee DELIVERED / PRESS wiring → Tasks 17.5, 18, 19
+- §Dependencies / platform config → Tasks 1–4 (plus 3.5 for `react-native-device-info`)
 - §Testing (client, events.contract, screenTracking, privacy, 80% threshold) → Tasks 11, 13, 15, 16, 8, 21
 - §docs/analytics.md outline → Task 28
 
-**Placeholder scan:** no `TBD`, `TODO`, `implement later`, or undescribed edge-case handling. Every code block is complete and runnable. The only deferred concrete value is `app_version: '1.3.2'` / `build_number: '7'` in `baseEventProps()` — hardcoded today to avoid adding a native dep; Task 14 documents this as an explicit choice, not a gap.
+**Placeholder scan:** no `TBD`, `TODO`, or `implement later`. Deferred fields are surfaced explicitly in `docs/analytics.md` → Known gaps (Task 28): `Goal Met.log_count` / `time_to_goal_sec`, `Activity Sync Completed.bump_ml`, per-step onboarding events, opt-out UI, `scheduled_hour = -1` sentinel. Each is a documented product choice, not a silent gap.
 
-**Type consistency:** `syncUserProfile`, `syncSessionProperties`, `initAnalytics`, `initAnalyticsForBackground`, `track`, `EventMap`, `EventName`, `SuperProperties`, `TrackArgs`, `EVENT_NAMES`, `PROFILE_UPDATE_ALLOWED_FIELDS`, `GOAL_MET_THRESHOLD`, `goalMetFiredToday`, `getHealthPermissionStatus`, `onNavigationStateChange`, `resetScreenTrackingState`, `drainPreInitQueue` — all reference the same names everywhere they appear.
+**Type consistency:** `syncUserProfile`, `syncSessionProperties`, `initAnalytics`, `initAnalyticsForBackground`, `track`, `EventMap`, `EventName`, `SuperProperties`, `TrackArgs`, `EVENT_NAMES`, `PROFILE_UPDATE_ALLOWED_FIELDS`, `GOAL_MET_THRESHOLD`, `goalMetFiredToday`, `getHealthPermissionStatus`, `onNavigationStateChange`, `resetScreenTrackingState`, `drainPreInitQueue`, `computeStreakExcludingYesterday` — all reference the same names everywhere they appear. `Onboarding Step Completed` was removed from the catalog, so no code path references it.
