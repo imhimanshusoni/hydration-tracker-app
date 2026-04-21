@@ -158,7 +158,7 @@ export function HomeScreen() {
 
   const handleQuickLog = useCallback(
     (amount: number) => {
-      logWater(amount);
+      logWater(amount, 'quick');
       const newConsumed = consumed + amount;
       scheduleReminders(
         wakeUpTime,
@@ -181,7 +181,7 @@ export function HomeScreen() {
 
   const handleModalLog = useCallback(
     (amount: number) => {
-      logWater(amount);
+      logWater(amount, 'custom');
       const newConsumed = consumed + amount;
       scheduleReminders(
         wakeUpTime,

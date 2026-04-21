@@ -33,6 +33,15 @@ jest.mock('react-native-geolocation-service', () => ({
 
 jest.mock('react-native-config', () => ({ OPENWEATHERMAP_API_KEY: '' }));
 
+jest.mock('../src/services/analytics', () => ({
+  track: jest.fn(),
+  initAnalytics: jest.fn().mockResolvedValue(undefined),
+  initAnalyticsForBackground: jest.fn().mockResolvedValue(undefined),
+  syncUserProfile: jest.fn(),
+  syncSessionProperties: jest.fn(),
+  flush: jest.fn().mockResolvedValue(undefined),
+}));
+
 beforeEach(() => {
   useWaterStore.setState({ consumed: 0, lastLoggedAt: null, lastLogAmount: null, date: '' });
   useGoalStore.setState({ effectiveGoal: 2800, lastActiveMinutes: 30, weatherBonus: 200 });

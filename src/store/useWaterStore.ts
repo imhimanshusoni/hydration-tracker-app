@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
 import type { WaterDay } from '../types';
+import { track } from '../services/analytics';
 
 // Fraction of effectiveGoal that counts as "goal met" for analytics Goal Met
 // emission and streak continuation. Changing this value requires bumping
@@ -18,7 +19,7 @@ function getTodayDate(): string {
 }
 
 interface WaterActions {
-  logWater: (amount: number) => void;
+  logWater: (amount: number, source?: 'quick' | 'custom' | 'suggested') => void;
   undoLastLog: () => void;
   checkMidnightReset: () => void;
 }
@@ -35,7 +36,7 @@ export const useWaterStore = create<WaterState>()(
       goalCelebratedToday: false,
       goalMetFiredToday: false,
 
-      logWater: (amount) => {
+      logWater: (amount, source) => {
         const now = new Date().toISOString();
         const prevConsumed = get().consumed;
         const newConsumed = prevConsumed + amount;
@@ -56,14 +57,34 @@ export const useWaterStore = create<WaterState>()(
         }
         // Goal Met analytics flag: strict-cross of 80% of effectiveGoal, once per day.
         const threshold = GOAL_MET_THRESHOLD * effectiveGoal;
-        if (!wasGoalMetFired && prevConsumed < threshold && newConsumed >= threshold) {
+        const crossedThreshold =
+          !wasGoalMetFired && prevConsumed < threshold && newConsumed >= threshold;
+        if (crossedThreshold) {
           set({ goalMetFiredToday: true });
+        }
+
+        track('Water Logged', {
+          amount_ml: amount,
+          source: source ?? 'quick',
+          local_hour: new Date().getHours(),
+          pct_of_goal_after: effectiveGoal > 0 ? newConsumed / effectiveGoal : 0,
+          is_first_log_of_day: prevConsumed === 0,
+        });
+
+        if (crossedThreshold) {
+          track('Goal Met', {
+            goal_ml: effectiveGoal,
+            consumed_ml: newConsumed,
+          });
         }
       },
 
       undoLastLog: () => {
-        const { lastLogAmount, consumed } = get();
+        const { lastLogAmount, consumed, lastLoggedAt } = get();
         if (lastLogAmount === null) return;
+        const timeSinceLogSec = lastLoggedAt
+          ? Math.max(0, Math.round((Date.now() - new Date(lastLoggedAt).getTime()) / 1000))
+          : 0;
         const newConsumed = Math.max(0, consumed - lastLogAmount);
         set({
           consumed: newConsumed,
@@ -73,6 +94,11 @@ export const useWaterStore = create<WaterState>()(
         const { useGoalStore } = require('./useGoalStore');
         const { effectiveGoal } = useGoalStore.getState();
         writeWidgetData(effectiveGoal, newConsumed, null);
+
+        track('Log Undone', {
+          amount_ml: lastLogAmount,
+          time_since_log_sec: timeSinceLogSec,
+        });
       },
 
       checkMidnightReset: () => {
