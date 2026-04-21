@@ -6,6 +6,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
 import { calculateDailyGoal } from '../utils/waterCalculator';
 import type { TimeOfDay, UserProfile, Gender, ActivityLevel, ClimatePreference } from '../types';
+import { track, syncUserProfile } from '../services/analytics';
 
 interface UserActions {
   completeOnboarding: (profile: Omit<UserProfile, 'onboardingComplete' | 'dailyGoal' | 'remindersEnabled'>) => void;
@@ -49,9 +50,10 @@ export const useUserStore = create<UserState>()(
           remindersEnabled: true,
           onboardingComplete: true,
         });
-        // Write widget data with fresh goal, 0 consumed
         writeWidgetData(goal, 0, null);
-        // Trigger smart goal recalculation
+
+        syncUserProfile(get());
+
         const { useGoalStore } = require('./useGoalStore');
         useGoalStore.getState().recalculateMorningGoal();
       },
@@ -62,17 +64,43 @@ export const useUserStore = create<UserState>()(
         const age = updates.age ?? current.age;
         const goal = calculateDailyGoal(weight, age);
         set({ ...updates, dailyGoal: goal });
-        // Trigger smart goal recalculation (handles widget data after async completion)
+
+        const fields_changed: string[] = [];
+        const values: Record<string, string | number> = {};
+        if (updates.weight !== undefined) { fields_changed.push('weight_kg'); values.weight_kg = updates.weight; }
+        if (updates.age !== undefined) { fields_changed.push('age'); /* age not in allowlist */ }
+        if (updates.activityLevel !== undefined) { fields_changed.push('activity_level'); values.activity_level = updates.activityLevel; }
+        if (updates.climatePreference !== undefined) { fields_changed.push('climate'); values.climate = updates.climatePreference; }
+        if (updates.gender !== undefined) { fields_changed.push('gender'); /* gender not in allowlist */ }
+        if (updates.name !== undefined) { fields_changed.push('name'); /* name is PII; always dropped from values */ }
+        // daily_goal_ml recomputed — track as changed when weight/age changed
+        if (updates.weight !== undefined || updates.age !== undefined) {
+          fields_changed.push('daily_goal_ml');
+          values.daily_goal_ml = goal;
+        }
+
+        track('Profile Updated', { fields_changed, values });
+        syncUserProfile(get());
+
         const { useGoalStore } = require('./useGoalStore');
         useGoalStore.getState().recalculateMorningGoal();
       },
 
       updateSchedule: (updates) => {
         set(updates);
+        const fields_changed: string[] = [];
+        const values: Record<string, string> = {};
+        const fmt = (t: TimeOfDay) =>
+          `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+        if (updates.wakeUpTime) { fields_changed.push('wake_time'); values.wake_time = fmt(updates.wakeUpTime); }
+        if (updates.sleepTime) { fields_changed.push('sleep_time'); values.sleep_time = fmt(updates.sleepTime); }
+        track('Profile Updated', { fields_changed, values });
+        syncUserProfile(get());
       },
 
       setRemindersEnabled: (enabled) => {
         set({ remindersEnabled: enabled });
+        track('Reminders Toggled', { enabled });
       },
     }),
     {
