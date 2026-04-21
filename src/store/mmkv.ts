@@ -6,6 +6,11 @@ import { StateStorage } from 'zustand/middleware';
 
 export const storage = createMMKV();
 
+// Alias export used by modules that need direct typed access (e.g. analytics
+// client reads analytics:optedOut / analytics:installedAt without going through
+// Zustand). Same underlying instance — no separate storage namespace.
+export const mmkv = storage;
+
 // Zustand-compatible storage adapter
 export const zustandStorage: StateStorage = {
   setItem: (name, value) => {
