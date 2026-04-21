@@ -3,13 +3,14 @@
 // Hidden until 2+ days of history exist.
 
 import React, { useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import { useHistoryStore, computeLast7Days } from '../store/useHistoryStore';
 import { useWaterStore } from '../store/useWaterStore';
 import { useGoalStore } from '../store/useGoalStore';
 import type { AppTheme } from '../theme';
 import type { DailySnapshot } from '../types';
 import { Fonts } from '../fonts';
+import { track } from '../services/analytics';
 
 const MAX_BAR_HEIGHT = 80;
 const MIN_BAR_HEIGHT = 12;
@@ -59,7 +60,11 @@ export function WeeklyChart({ theme }: WeeklyChartProps) {
   const entries = [...last7.slice(0, 6), todayEntry];
 
   return (
-    <View style={styles.container}>
+    <Pressable
+      style={styles.container}
+      onPress={() => track('History Viewed', { entry_point: 'chart_tap' })}
+      onLongPress={() => track('History Viewed', { entry_point: 'chart_long_press' })}
+    >
       <Text style={[styles.label, { color: theme.textSecondary }]}>
         Last 7 days
       </Text>
@@ -93,7 +98,7 @@ export function WeeklyChart({ theme }: WeeklyChartProps) {
           );
         })}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
