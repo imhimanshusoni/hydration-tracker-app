@@ -6,6 +6,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import { OPENWEATHERMAP_API_KEY } from '../config';
 import { getWeatherBonusFromTemp } from './waterCalculator';
+import { track } from '../services/analytics';
 
 export { getWeatherBonusFromTemp as getWeatherBonus };
 
@@ -60,16 +61,25 @@ export async function fetchCurrentWeather(): Promise<{
   try {
     const hasPermission = await requestLocationPermission();
     console.log('[Weather] permission:', hasPermission);
-    if (!hasPermission) return null;
+    if (!hasPermission) {
+      track('Weather Fetch Failed', { error_code: 'location_denied', fallback_used: 'climate' });
+      return null;
+    }
 
     const coords = await getCurrentPosition();
     console.log('[Weather] coords:', coords);
-    if (!coords) return null;
+    if (!coords) {
+      track('Weather Fetch Failed', { error_code: 'no_location', fallback_used: 'climate' });
+      return null;
+    }
 
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${OPENWEATHERMAP_API_KEY}`;
     const response = await fetch(url);
     console.log('[Weather] API status:', response.status);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      track('Weather Fetch Failed', { error_code: `http_${response.status}`, fallback_used: 'climate' });
+      return null;
+    }
 
     const data = await response.json();
     console.log('[Weather] success:', data.weather[0].main, data.main.temp);
@@ -85,6 +95,7 @@ export async function fetchCurrentWeather(): Promise<{
     };
   } catch (e) {
     console.log('[Weather] error:', e);
+    track('Weather Fetch Failed', { error_code: 'exception', fallback_used: 'climate' });
     return null;
   }
 }
