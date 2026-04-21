@@ -1943,6 +1943,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNDeviceInfo (15.0.2):
+    - React-Core
   - RNNotifee (9.1.8):
     - React-Core
     - RNNotifee/NotifeeCore (= 9.1.8)
@@ -2124,6 +2126,7 @@ DEPENDENCIES:
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "ReactNativeHealthkit (from `../node_modules/@kingstinct/react-native-healthkit`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
+  - RNDeviceInfo (from `../node_modules/react-native-device-info`)
   - "RNNotifee (from `../node_modules/@notifee/react-native`)"
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -2296,6 +2299,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@kingstinct/react-native-healthkit"
   RNDateTimePicker:
     :path: "../node_modules/@react-native-community/datetimepicker"
+  RNDeviceInfo:
+    :path: "../node_modules/react-native-device-info"
   RNNotifee:
     :path: "../node_modules/@notifee/react-native"
   RNScreens:
@@ -2388,6 +2393,7 @@ SPEC CHECKSUMS:
   ReactNativeDependencies: 351bb98dc65c1dd8372eee10cad404e0d4e27772
   ReactNativeHealthkit: 1d76d45811b50c0c51b4dc645f87bbef713a4e84
   RNDateTimePicker: 7b2738f1e595f83c14580a11c476872755c5befc
+  RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNScreens: 01b065ded2dfe7987bcce770ff3a196be417ff41
   RNSVG: 04044c3abcf177fd674a1a3d13097efa1adebcbe

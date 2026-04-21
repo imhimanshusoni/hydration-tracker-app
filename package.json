@@ -21,6 +21,7 @@
     "react": "19.2.3",
     "react-native": "0.85.0",
     "react-native-config": "^1.6.1",
+    "react-native-device-info": "^15.0.2",
     "react-native-geolocation-service": "^5.3.1",
     "react-native-health-connect": "^3.5.0",
     "react-native-mmkv": "^4.3.1",
