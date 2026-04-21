@@ -31,7 +31,8 @@ type QueuedCall =
   | { kind: 'registerSuperProperties'; props: Partial<SuperProperties> }
   | { kind: 'incrementProperty'; prop: string; by: number }
   | { kind: 'syncUserProfile'; profile: ProfileFields }
-  | { kind: 'syncSessionProperties' };
+  | { kind: 'syncSessionProperties' }
+  | { kind: 'markUserCreated'; at: string };
 
 const QUEUE_CAP = 50;
 const QUEUE_TIMEOUT_MS = 10_000;
@@ -108,6 +109,9 @@ function dispatch(call: QueuedCall): void {
       break;
     case 'syncSessionProperties':
       applySyncSessionProperties();
+      break;
+    case 'markUserCreated':
+      mixpanel.getPeople().setOnce({ $created: call.at });
       break;
   }
 }
@@ -229,7 +233,8 @@ function applySyncUserProfile(fields: ProfileFields): void {
 }
 
 function applySyncSessionProperties(): void {
-  const props: Partial<SuperProperties> = {
+  const installedAtMs = installedAt();
+  const props: Partial<SuperProperties> & { install_date: string } = {
     app_version: baseEventProps().app_version,
     build_number: baseEventProps().build_number,
     platform: Platform.OS === 'ios' ? 'ios' : 'android',
@@ -237,8 +242,13 @@ function applySyncSessionProperties(): void {
     current_streak_days: currentStreakDays(),
     has_health_permission: hasHealthPermission(),
     streak_rule_version: 'v2_80pct',
+    install_date: new Date(installedAtMs).toISOString(),
   };
   mixpanel.registerSuperProperties(props);
+  // Also land install_date on the people profile so the Users-tab profile page
+  // shows the install date as a profile property, not just as a super property
+  // attached to events. setOnce: never overwrite on re-sync.
+  mixpanel.getPeople().setOnce({ install_date: props.install_date });
 }
 
 // ----- Init -----
@@ -347,6 +357,14 @@ export function incrementProperty(prop: string, by = 1): void {
 export function syncUserProfile(profile: ProfileFields): void {
   if (!initialized) { enqueue({ kind: 'syncUserProfile', profile }); return; }
   applySyncUserProfile(profile);
+}
+
+// Mixpanel reserved $created — drives the "User since" slot on the Users-tab
+// profile header. setOnce guarantees it's never overwritten on subsequent edits.
+// Call from completeOnboarding exactly once per user.
+export function markUserCreated(at: Date = new Date()): void {
+  if (!initialized) { enqueue({ kind: 'markUserCreated', at: at.toISOString() }); return; }
+  mixpanel.getPeople().setOnce({ $created: at.toISOString() });
 }
 
 export function syncSessionProperties(): void {

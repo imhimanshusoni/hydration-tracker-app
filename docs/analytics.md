@@ -11,7 +11,7 @@
 - Profile: `Profile Updated` (no PII — name is always dropped)
 - History: `History Viewed`
 
-Super properties on every event: `app_version`, `build_number`, `platform`, `days_since_install`, `current_streak_days`, `has_health_permission`, `streak_rule_version`, plus user profile fields once onboarding completes.
+Super properties on every event: `app_version`, `build_number`, `platform`, `days_since_install`, `install_date`, `current_streak_days`, `has_health_permission`, `streak_rule_version`, plus user profile fields once onboarding completes. People profiles additionally carry `$created` (Mixpanel reserved — drives the "User since" slot).
 
 ## User identification
 

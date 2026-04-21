@@ -120,6 +120,9 @@ export type SuperProperties = BaseEventProps & {
    * *forces* the invariant. Changing the threshold requires widening the union
    * (e.g. 'v2_80pct' | 'v3_90pct') and updating every call site. */
   streak_rule_version: 'v2_80pct';
+  /** ISO date string of first app launch (derived from analytics:installedAt MMKV key).
+   * Stable for the install lifetime; regenerates only on reinstall. */
+  install_date?: string;
   activity_level?: 'sedentary' | 'moderate' | 'active';
   climate?: 'cold' | 'temperate' | 'hot' | 'tropical';
   daily_goal_ml?: number;

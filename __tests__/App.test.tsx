@@ -22,6 +22,7 @@ jest.mock('../src/services/analytics', () => ({
   track: jest.fn(),
   syncUserProfile: jest.fn(),
   syncSessionProperties: jest.fn(),
+  markUserCreated: jest.fn(),
   onNavigationStateChange: jest.fn(),
   resetScreenTrackingState: jest.fn(),
   flush: jest.fn().mockResolvedValue(undefined),

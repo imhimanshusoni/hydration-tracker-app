@@ -9,6 +9,7 @@ export {
   incrementProperty,
   syncUserProfile,
   syncSessionProperties,
+  markUserCreated,
   optIn,
   optOut,
   hasOptedOut,

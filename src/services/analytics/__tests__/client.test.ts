@@ -235,7 +235,7 @@ describe('analytics client', () => {
       );
     });
 
-    it('syncSessionProperties writes streak_rule_version v2_80pct', async () => {
+    it('syncSessionProperties writes streak_rule_version v2_80pct AND install_date', async () => {
       await initAnalytics();
       const mp = getMixpanelInstance();
       mp.registerSuperProperties.mockClear();
@@ -243,7 +243,15 @@ describe('analytics client', () => {
       syncSessionProperties();
 
       expect(mp.registerSuperProperties).toHaveBeenCalledWith(
-        expect.objectContaining({ streak_rule_version: 'v2_80pct' }),
+        expect.objectContaining({
+          streak_rule_version: 'v2_80pct',
+          install_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        }),
+      );
+      // install_date also lands as a people property (setOnce).
+      const people = mp.getPeople() as any;
+      expect(people.setOnce).toHaveBeenCalledWith(
+        expect.objectContaining({ install_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) }),
       );
     });
   });

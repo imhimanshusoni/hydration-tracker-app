@@ -6,7 +6,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
 import { calculateDailyGoal } from '../utils/waterCalculator';
 import type { TimeOfDay, UserProfile, Gender, ActivityLevel, ClimatePreference } from '../types';
-import { track, syncUserProfile } from '../services/analytics';
+import { track, syncUserProfile, markUserCreated } from '../services/analytics';
 
 interface UserActions {
   completeOnboarding: (profile: Omit<UserProfile, 'onboardingComplete' | 'dailyGoal' | 'remindersEnabled'>) => void;
@@ -52,6 +52,7 @@ export const useUserStore = create<UserState>()(
         });
         writeWidgetData(goal, 0, null);
 
+        markUserCreated();
         syncUserProfile(get());
 
         const { useGoalStore } = require('./useGoalStore');

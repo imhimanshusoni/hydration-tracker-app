@@ -706,6 +706,15 @@ Iterates `EVENT_NAMES` (the single source of truth). Asserts:
 6. `streak_rule_version` super property — **required documentation.** State the current rule: "`Goal Met` and streak continuation both fire at 80% of daily goal; the `streak_rule_version` super property is set to `v2_80pct`." Explain that this property MUST be bumped (`v3_…`, `v4_…`, etc.) any time `GOAL_MET_THRESHOLD` or the streak-continuation predicate in `useHistoryStore` changes — otherwise Mixpanel queries cannot distinguish historical semantics from current. Note the type-level invariant: `streak_rule_version` is a string-literal union so changing the constant without widening the union is a compile error. No backfill is performed on threshold changes; data prior to a version bump is interpreted under its own version's rules.
 7. Debugging — `setLoggingEnabled(__DEV__)` streams events to the Metro logs
 
+## Addendum (2026-04-21): User profile properties — corporate polish
+
+Additions to `people.set()` on top of the baseline 9 fields (name, $name, weight_kg, age, gender, activity_level, climate, wake_time, sleep_time, daily_goal_ml):
+
+- **`$created`** (Mixpanel reserved) — set once on `completeOnboarding` to `new Date().toISOString()`. Drives the "User since" slot on the Mixpanel Users-tab profile header. Using `getPeople().setOnce()` guarantees it's never overwritten on subsequent edits.
+- **`install_date`** — ISO date derived from the existing `analytics:installedAt` MMKV key. Added to `syncSessionProperties()` so it lands as a super property on every event AND gets re-synced onto the people profile through the normal `syncUserProfile` path.
+
+Scope: additive only. No existing properties change shape or semantics. No `streak_rule_version` bump needed. No new MMKV keys. `docs/analytics.md` gets a one-line update to the "What Mixpanel tracks" section.
+
 ## Out of scope (re-enable paths documented)
 
 - **iOS ATT.** Add `NSUserTrackingUsageDescription` to `Info.plist` and call `ATTrackingManager.requestTrackingAuthorization` if/when attribution SDKs (Adjust, Branch) are added — they collect IDFA, which requires ATT. Mixpanel's anonymous distinct IDs alone do not.
