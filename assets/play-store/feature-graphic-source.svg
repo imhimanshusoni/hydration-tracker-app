@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Water Reminder — Play Store feature graphic.
+  Dimensions: 1024 × 500 (Play Store requirement).
+  Export to PNG:
+    cd assets/play-store
+    qlmanage -t -s 1024 -o . feature-graphic-source.svg && mv feature-graphic-source.svg.png feature-graphic-1024x500.png
+
+  Layout:
+    - Left half: wordmark + tagline
+    - Right half: circular progress ring with centered water drop + amber ripple accent
+    - Soft cyan + amber radial glows behind the visual
+
+  Play Store policy:
+    - No device frames (avoids sometime-crops)
+    - Minimal text; no promotional claims ("best", "#1", etc.)
+    - No screenshots embedded (Play shows real screenshots separately)
+-->
+<!-- The viewBox is 1024x1024 with content centered so qlmanage's square
+     thumbnail output contains the 1024x500 feature graphic centered within
+     a 1024x1024 PNG. sips center-crop to 500 height then gives the right
+     bitmap. If you export via Figma / Inkscape / a proper renderer, the
+     content naturally renders at 1024x500 — no centering padding needed. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Water Reminder — smart hydration">
+  <g transform="translate(0, 262)">
+  <defs>
+    <linearGradient id="drop" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#79C8F3"/>
+      <stop offset="100%" stop-color="#3B9FE3"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B9FE3"/>
+      <stop offset="100%" stop-color="#79C8F3"/>
+    </linearGradient>
+    <linearGradient id="dropHighlight" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#F0F4F8" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#F0F4F8" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cyanGlow" cx="0.78" cy="0.5" r="0.45">
+      <stop offset="0%" stop-color="#3B9FE3" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#3B9FE3" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="amberGlow" cx="0.78" cy="0.82" r="0.28">
+      <stop offset="0%" stop-color="#F0A050" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#F0A050" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Navy background -->
+  <rect width="1024" height="500" fill="#060B18"/>
+
+  <!-- Ambient glows behind the right-side visual -->
+  <rect width="1024" height="500" fill="url(#cyanGlow)"/>
+  <rect width="1024" height="500" fill="url(#amberGlow)"/>
+
+  <!-- WORDMARK (left) -->
+  <text x="72" y="218"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Poppins, sans-serif"
+        font-size="72" font-weight="700" fill="#F0F4F8" letter-spacing="-2.2">Water Reminder</text>
+
+  <!-- TAGLINE (left, below wordmark) -->
+  <text x="74" y="272"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Poppins, sans-serif"
+        font-size="26" font-weight="400" fill="#7A8BA8" letter-spacing="0">Smart hydration goals for</text>
+  <text x="74" y="306"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Poppins, sans-serif"
+        font-size="26" font-weight="400" fill="#7A8BA8" letter-spacing="0">your weather and activity.</text>
+
+  <!-- Amber streak dot (brand accent) -->
+  <circle cx="74" cy="370" r="5" fill="#F0A050"/>
+  <text x="90" y="376"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Poppins, sans-serif"
+        font-size="18" font-weight="500" fill="#F0A050" letter-spacing="0.5">Keep your streak at 80%.</text>
+
+  <!-- RIGHT-SIDE VISUAL: circular progress ring + water drop -->
+  <g transform="translate(800, 250)">
+    <!-- Track ring -->
+    <circle cx="0" cy="0" r="155" fill="none" stroke="#1B2D45" stroke-width="22"/>
+    <!-- Progress arc (~78%) -->
+    <circle cx="0" cy="0" r="155" fill="none" stroke="url(#ring)" stroke-width="22"
+            stroke-linecap="round"
+            stroke-dasharray="760 975"
+            transform="rotate(-90 0 0)"/>
+    <!-- Water drop inside the ring -->
+    <g transform="translate(0, 10)">
+      <path d="M 0 -78
+               C 0 -78, -48 -12, -48 48
+               C -48 84, -22 110, 0 110
+               C 22 110, 48 84, 48 48
+               C 48 -12, 0 -78, 0 -78 Z"
+            fill="url(#drop)"/>
+      <!-- Drop highlight -->
+      <path d="M -26 -18
+               C -32 16, -36 52, -28 80
+               Q -14 70, -6 36
+               Q -2 8, -6 -18 Z"
+            fill="url(#dropHighlight)"/>
+    </g>
+    <!-- Outer amber ripple (goal-met accent) -->
+    <circle cx="0" cy="10" r="175" fill="none" stroke="#F0A050" stroke-width="2" stroke-opacity="0.25"/>
+    <circle cx="0" cy="10" r="200" fill="none" stroke="#F0A050" stroke-width="1.5" stroke-opacity="0.12"/>
+  </g>
+  </g>
+</svg>
