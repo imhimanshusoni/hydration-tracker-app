@@ -11,8 +11,20 @@ jest.mock('react-native-mmkv', () => ({
     set: jest.fn(),
     getString: jest.fn(),
     getNumber: jest.fn(),
+    getBoolean: jest.fn(),
     remove: jest.fn(),
   }),
+}));
+
+jest.mock('../src/services/analytics', () => ({
+  initAnalytics: jest.fn().mockResolvedValue(undefined),
+  initAnalyticsForBackground: jest.fn().mockResolvedValue(undefined),
+  track: jest.fn(),
+  syncUserProfile: jest.fn(),
+  syncSessionProperties: jest.fn(),
+  onNavigationStateChange: jest.fn(),
+  resetScreenTrackingState: jest.fn(),
+  flush: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@notifee/react-native', () => ({
@@ -25,9 +37,12 @@ jest.mock('@notifee/react-native', () => ({
     cancelNotification: jest.fn(),
     cancelAllNotifications: jest.fn(),
     getTriggerNotificationIds: jest.fn().mockResolvedValue([]),
+    onForegroundEvent: jest.fn(() => () => {}),
+    onBackgroundEvent: jest.fn(),
   },
   TriggerType: {TIMESTAMP: 0},
   AndroidImportance: {DEFAULT: 3, HIGH: 4},
+  EventType: {DELIVERED: 3, PRESS: 1, DISMISSED: 0, ACTION_PRESS: 2},
 }));
 
 jest.mock('@react-navigation/native', () => {
