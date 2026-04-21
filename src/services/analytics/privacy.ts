@@ -1,11 +1,14 @@
 // Dev-only PII guard. Warns (never blocks) on suspicious keys or values.
 // Zero cost in release via __DEV__ gating.
 
+// Note: `name` was previously flagged as PII. Removed from the key-pattern list
+// because the product decision is to send the user's display name to Mixpanel
+// (see docs/analytics.md §User identification). Other PII shapes (email / phone
+// / password) stay flagged — they are never expected in Water Reminder events.
 const PII_KEY_PATTERNS: Array<{ re: RegExp; reason: string }> = [
   { re: /email/i, reason: 'email in property key' },
   { re: /phone/i, reason: 'phone in property key' },
   { re: /password/i, reason: 'password in property key' },
-  { re: /^name$/i, reason: 'raw name in property key' },
 ];
 
 const EMAIL_VALUE_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/;

@@ -30,7 +30,7 @@ type QueuedCall =
   | { kind: 'timeEvent'; name: EventName }
   | { kind: 'registerSuperProperties'; props: Partial<SuperProperties> }
   | { kind: 'incrementProperty'; prop: string; by: number }
-  | { kind: 'syncUserProfile'; profile: Record<string, unknown> }
+  | { kind: 'syncUserProfile'; profile: ProfileFields }
   | { kind: 'syncSessionProperties' };
 
 const QUEUE_CAP = 50;
@@ -129,6 +129,28 @@ function installedAt(): number {
   return now;
 }
 
+// Stable anonymous distinct ID — persisted in MMKV, survives reset() and opt-out
+// cycles, regenerates only on app reinstall. Required because Mixpanel's
+// Simplified ID Merge does not create entries in the Users tab for anonymous
+// ($device:xxx) distinct IDs; calling identify() with ANY stable string upgrades
+// the user to a proper People profile.
+function randomUUID(): string {
+  // RFC4122 v4-style — Math.random is sufficient for distinct-id purposes.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function getOrCreateDistinctId(): string {
+  const existing = mmkv.getString('analytics:distinctId');
+  if (existing) return existing;
+  const id = randomUUID();
+  mmkv.set('analytics:distinctId', id);
+  return id;
+}
+
 function daysSinceInstall(): number {
   return Math.floor((Date.now() - installedAt()) / 86_400_000);
 }
@@ -150,6 +172,7 @@ function hasHealthPermission(): boolean {
 // ----- Profile field picker -----
 
 type ProfileFields = {
+  name: string;
   weight: number;
   age: number;
   gender: 'male' | 'female' | 'other';
@@ -162,6 +185,7 @@ type ProfileFields = {
 
 function pickProfileFields(state: Record<string, unknown>): ProfileFields {
   return {
+    name: (state.name as string) ?? '',
     weight: state.weight as number,
     age: state.age as number,
     gender: state.gender as ProfileFields['gender'],
@@ -173,10 +197,12 @@ function pickProfileFields(state: Record<string, unknown>): ProfileFields {
   };
 }
 
+// Maps user profile into super properties (event-tagged, for query speed).
 function mapUserProfileToSuperProps(p: ProfileFields): Record<string, unknown> {
   const fmt = (t: { hour: number; minute: number }) =>
     `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
   return {
+    name: p.name,
     weight_kg: p.weight,
     age: p.age,
     gender: p.gender,
@@ -188,9 +214,18 @@ function mapUserProfileToSuperProps(p: ProfileFields): Record<string, unknown> {
   };
 }
 
-function applySyncUserProfile(profile: Record<string, unknown>): void {
-  mixpanel.registerSuperProperties(profile);
-  mixpanel.getPeople().set(profile);
+// People-profile payload: superset of super props plus Mixpanel reserved
+// properties ($name makes the Users-tab profile title the human name).
+function mapUserProfileToPeopleProps(p: ProfileFields): Record<string, unknown> {
+  return {
+    ...mapUserProfileToSuperProps(p),
+    $name: p.name,
+  };
+}
+
+function applySyncUserProfile(fields: ProfileFields): void {
+  mixpanel.registerSuperProperties(mapUserProfileToSuperProps(fields));
+  mixpanel.getPeople().set(mapUserProfileToPeopleProps(fields));
 }
 
 function applySyncSessionProperties(): void {
@@ -223,13 +258,20 @@ function doInit(): Promise<void> {
     }
     mixpanel.setLoggingEnabled(__DEV__);
 
+    // Stable anonymous identify — creates a proper entry in the Mixpanel Users
+    // tab (Simplified ID Merge does not index $device:xxx anonymous IDs).
+    // Skip when opted out so no identify event lands.
+    if (!optedOut) {
+      await mixpanel.identify(getOrCreateDistinctId());
+    }
+
     drainPreInitQueue({ discard: optedOut });
 
     applySyncSessionProperties();
 
     const { useUserStore } = require('../../store/useUserStore');
     if (useUserStore.getState().onboardingComplete) {
-      applySyncUserProfile(mapUserProfileToSuperProps(pickProfileFields(useUserStore.getState())));
+      applySyncUserProfile(pickProfileFields(useUserStore.getState()));
     }
 
     initialized = true;
@@ -303,9 +345,8 @@ export function incrementProperty(prop: string, by = 1): void {
 }
 
 export function syncUserProfile(profile: ProfileFields): void {
-  const mapped = mapUserProfileToSuperProps(profile);
-  if (!initialized) { enqueue({ kind: 'syncUserProfile', profile: mapped }); return; }
-  applySyncUserProfile(mapped);
+  if (!initialized) { enqueue({ kind: 'syncUserProfile', profile }); return; }
+  applySyncUserProfile(profile);
 }
 
 export function syncSessionProperties(): void {

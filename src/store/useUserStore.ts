@@ -72,7 +72,7 @@ export const useUserStore = create<UserState>()(
         if (updates.activityLevel !== undefined) { fields_changed.push('activity_level'); values.activity_level = updates.activityLevel; }
         if (updates.climatePreference !== undefined) { fields_changed.push('climate'); values.climate = updates.climatePreference; }
         if (updates.gender !== undefined) { fields_changed.push('gender'); /* gender not in allowlist */ }
-        if (updates.name !== undefined) { fields_changed.push('name'); /* name is PII; always dropped from values */ }
+        if (updates.name !== undefined) { fields_changed.push('name'); values.name = updates.name; }
         // daily_goal_ml recomputed — track as changed when weight/age changed
         if (updates.weight !== undefined || updates.age !== undefined) {
           fields_changed.push('daily_goal_ml');

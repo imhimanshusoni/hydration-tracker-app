@@ -13,6 +13,16 @@
 
 Super properties on every event: `app_version`, `build_number`, `platform`, `days_since_install`, `current_streak_days`, `has_health_permission`, `streak_rule_version`, plus user profile fields once onboarding completes.
 
+## User identification
+
+The analytics client generates a stable UUID on first launch and persists it in MMKV (`analytics:distinctId`). `mixpanel.identify(uuid)` is called during `doInit()` so every user shows up as a proper entry in Mixpanel's Users tab (Simplified ID Merge does not index anonymous `$device:xxx` IDs — without `identify()`, no Users-tab entry appears).
+
+The distinct ID:
+- Survives `optOut()` + `reset()` cycles (the MMKV key is intentionally not cleared there).
+- Regenerates on app reinstall (MMKV wipes with the app).
+
+User name is sent to Mixpanel People profiles as both `name` (custom property, queryable) and `$name` (Mixpanel reserved, drives the profile title in the Users tab). This is a deliberate scope choice for corporate deployments that need human-identifiable user records — see "PII rules" below.
+
 ## How to add a new event
 
 1. Add the event name as a new string literal to `EVENT_NAMES` in `src/services/analytics/events.ts`.
@@ -30,7 +40,11 @@ Super properties on every event: `app_version`, `build_number`, `platform`, `day
 
 ## PII rules
 
-Never send `name`, emails, phones, or freeform user text. The dev-only PII guard in `src/services/analytics/privacy.ts` warns (but does not block) on suspicious keys or email-like string values. The `Profile Updated` event uses the runtime allowlist `PROFILE_UPDATE_ALLOWED_FIELDS` — any other key is silently dropped before dispatch.
+**User name IS sent** to Mixpanel (super properties, people properties, and Mixpanel's reserved `$name`) for corporate user-identification needs. This is PII — treat it accordingly in data-retention, GDPR, CCPA, and privacy-policy assessments. Never send emails, phones, passwords, or freeform user text.
+
+The dev-only PII guard in `src/services/analytics/privacy.ts` still warns on suspicious keys (`email`, `phone`, `password`) and email-like string values — `name` is no longer flagged because it's an allowed field.
+
+The `Profile Updated` event uses the runtime allowlist `PROFILE_UPDATE_ALLOWED_FIELDS` (`name`, `weight_kg`, `daily_goal_ml`, `wake_time`, `sleep_time`, `activity_level`, `climate`). Any other key is silently dropped before dispatch.
 
 ## Opt-out posture
 

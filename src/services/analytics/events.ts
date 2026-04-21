@@ -86,7 +86,7 @@ export type EventMap = {
   'Profile Updated': {
     fields_changed: string[];
     values: Partial<Record<
-      'weight_kg' | 'daily_goal_ml' | 'wake_time' | 'sleep_time' | 'activity_level' | 'climate',
+      'name' | 'weight_kg' | 'daily_goal_ml' | 'wake_time' | 'sleep_time' | 'activity_level' | 'climate',
       string | number
     >>;
   };
@@ -128,11 +128,15 @@ export type SuperProperties = BaseEventProps & {
   weight_kg?: number;
   age?: number;
   gender?: 'male' | 'female' | 'other';
+  /** User's display name. Sent for corporate user-identification needs.
+   * NOTE: this is PII — retention/GDPR/CCPA implications apply. See docs/analytics.md. */
+  name?: string;
 };
 
 // -------- Runtime allowlist for Profile Updated values --------
 
 export const PROFILE_UPDATE_ALLOWED_FIELDS = [
+  'name',
   'weight_kg',
   'daily_goal_ml',
   'wake_time',

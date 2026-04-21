@@ -11,6 +11,7 @@ jest.mock('../../../store/mmkv', () => ({
     set: (k: string, v: unknown) => { mmkvStore[k] = v; },
     remove: (k: string) => { delete mmkvStore[k]; },
     getNumber: (k: string) => mmkvStore[k] as number | undefined,
+    getString: (k: string) => mmkvStore[k] as string | undefined,
   },
   storage: {},
   zustandStorage: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} },
@@ -213,6 +214,7 @@ describe('analytics client', () => {
       people.set.mockClear();
 
       syncUserProfile({
+        name: 'Android Test',
         weight: 75, age: 30, gender: 'male', activityLevel: 'active',
         climatePreference: 'hot', wakeUpTime: { hour: 6, minute: 30 },
         sleepTime: { hour: 22, minute: 15 }, dailyGoal: 3100,
@@ -220,13 +222,17 @@ describe('analytics client', () => {
 
       expect(mp.registerSuperProperties).toHaveBeenCalledWith(
         expect.objectContaining({
+          name: 'Android Test',
           weight_kg: 75, age: 30, gender: 'male',
           activity_level: 'active', climate: 'hot',
           wake_time: '06:30', sleep_time: '22:15',
           daily_goal_ml: 3100,
         }),
       );
-      expect(people.set).toHaveBeenCalled();
+      // People.set receives the reserved $name too (drives the Users-tab title).
+      expect(people.set).toHaveBeenCalledWith(
+        expect.objectContaining({ $name: 'Android Test', name: 'Android Test' }),
+      );
     });
 
     it('syncSessionProperties writes streak_rule_version v2_80pct', async () => {

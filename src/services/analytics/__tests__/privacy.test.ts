@@ -26,9 +26,9 @@ describe('checkPii (dev-only PII guard)', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('password in property key'));
   });
 
-  it('warns on raw name key', () => {
+  it('does NOT warn on name key (allowed by product decision for user identification)', () => {
     checkPii('Test Event', { name: 'Alice' });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('raw name in property key'));
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('does not warn on name-like but compound key (e.g. "activity_level")', () => {

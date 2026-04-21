@@ -72,20 +72,22 @@ describe('events contract', () => {
     }
   });
 
-  it('PROFILE_UPDATE_ALLOWED_FIELDS matches Profile Updated.values keys', () => {
+  it('PROFILE_UPDATE_ALLOWED_FIELDS filters values to the allowlist', () => {
     const input = {
+      name: 'Android Test',
       weight_kg: 70,
       daily_goal_ml: 2800,
       wake_time: '07:00',
       sleep_time: '23:00',
       activity_level: 'moderate',
       climate: 'temperate',
-      name: 'Leak Test',
-      email: 'leak@example.com',
+      email: 'leak@example.com',       // not in allowlist — must be dropped
+      password: 'secret',               // not in allowlist — must be dropped
     };
     const filtered = filterProfileUpdateValues(input);
     expect(Object.keys(filtered).sort()).toEqual([...PROFILE_UPDATE_ALLOWED_FIELDS].sort());
-    expect(filtered).not.toHaveProperty('name');
+    expect(filtered).toHaveProperty('name', 'Android Test');
     expect(filtered).not.toHaveProperty('email');
+    expect(filtered).not.toHaveProperty('password');
   });
 });
