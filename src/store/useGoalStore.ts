@@ -12,6 +12,7 @@ import {
 import { fetchCurrentWeather } from '../utils/weatherService';
 import { getTodayActiveMinutes } from '../utils/healthService';
 import type { DailyGoalState, WeatherData } from '../types';
+import { track } from '../services/analytics';
 
 interface GoalActions {
   recalculateMorningGoal: () => Promise<void>;
@@ -92,6 +93,14 @@ export const useGoalStore = create<GoalState>()(
         const { useWaterStore } = require('./useWaterStore');
         const { consumed, lastLoggedAt } = useWaterStore.getState();
         writeWidgetData(result.effectiveGoal, consumed, lastLoggedAt);
+
+        track('Smart Goal Recalculated', {
+          base_ml: result.baseGoal,
+          weather_bump_ml: result.weatherBonus,
+          activity_bump_ml: result.activityBonus + result.activityBump,
+          effective_goal_ml: result.effectiveGoal,
+          reason: 'morning',
+        });
       },
 
       applyActivityBump: (newActiveMinutes: number) => {
@@ -128,6 +137,14 @@ export const useGoalStore = create<GoalState>()(
         const { useWaterStore } = require('./useWaterStore');
         const { consumed, lastLoggedAt } = useWaterStore.getState();
         writeWidgetData(result.effectiveGoal, consumed, lastLoggedAt);
+
+        track('Smart Goal Recalculated', {
+          base_ml: result.baseGoal,
+          weather_bump_ml: current.weatherBonus,
+          activity_bump_ml: result.activityBonus + result.activityBump,
+          effective_goal_ml: result.effectiveGoal,
+          reason: 'activity_sync',
+        });
       },
 
       resetDaily: () => {
