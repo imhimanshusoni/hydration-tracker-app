@@ -1,7 +1,7 @@
 // Onboarding form: collects name, weight, age, wake-up time, sleep time.
 // Calculates daily goal and saves to user store on submit.
 
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useUserStore } from '../store/useUserStore';
 import type { TimeOfDay, Gender, ActivityLevel } from '../types';
 import { requestNotificationPermission } from '../utils/notificationScheduler';
 import { Fonts } from '../fonts';
+import { track } from '../services/analytics';
 
 function timeToString(t: TimeOfDay): string {
   return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
@@ -27,6 +28,11 @@ export function OnboardingScreen() {
   const colorScheme = useColorScheme();
   const theme = getTheme(colorScheme);
   const completeOnboarding = useUserStore((s) => s.completeOnboarding);
+  const mountedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    track('Onboarding Started');
+  }, []);
 
   const [name, setName] = useState('');
   const [weightText, setWeightText] = useState('');
@@ -68,6 +74,9 @@ export function OnboardingScreen() {
       climatePreference: 'temperate',
       wakeUpTime,
       sleepTime,
+    });
+    track('Onboarding Completed', {
+      duration_sec: Math.max(0, Math.round((Date.now() - mountedAtRef.current) / 1000)),
     });
   }, [isValid, name, weight, age, gender, activityLevel, wakeUpTime, sleepTime, completeOnboarding]);
 
