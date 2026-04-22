@@ -19,6 +19,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import {
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -39,6 +40,10 @@ import {
 } from '../utils/healthService';
 
 import { Fonts } from '../fonts';
+import {
+  KEYBOARD_ACCESSORY_ID,
+  KeyboardDoneAccessory,
+} from '../components/KeyboardDoneAccessory';
 import { getTheme } from '../theme';
 import { useGoalStore } from '../store/useGoalStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -187,16 +192,18 @@ export function SettingsScreen() {
   const activityTotalL = ((activityBonus + activityBump) / 1000).toFixed(1);
 
   return (
-    <View
+    <KeyboardAvoidingView
       style={[
         styles.screen,
         { backgroundColor: theme.background, paddingTop: insets.top },
       ]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={[styles.pageTitle, { color: theme.text }]}>Settings</Text>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
         {/* Profile card */}
@@ -246,6 +253,7 @@ export function SettingsScreen() {
                 onChangeText={setWeightText}
                 onBlur={handleWeightBlur}
                 keyboardType="numeric"
+                inputAccessoryViewID={KEYBOARD_ACCESSORY_ID}
               />
               {weightError && (
                 <Text style={[styles.errorText, { color: theme.error }]}>
@@ -270,6 +278,7 @@ export function SettingsScreen() {
                 onChangeText={setAgeText}
                 onBlur={handleAgeBlur}
                 keyboardType="numeric"
+                inputAccessoryViewID={KEYBOARD_ACCESSORY_ID}
               />
               {ageError && (
                 <Text style={[styles.errorText, { color: theme.error }]}>
@@ -547,7 +556,8 @@ export function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+      <KeyboardDoneAccessory />
+    </KeyboardAvoidingView>
   );
 }
 

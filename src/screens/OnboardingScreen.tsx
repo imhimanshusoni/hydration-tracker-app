@@ -11,6 +11,7 @@ import {
   StyleSheet,
   useColorScheme,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { getTheme } from '../theme';
@@ -19,6 +20,10 @@ import type { TimeOfDay, Gender, ActivityLevel } from '../types';
 import { requestNotificationPermission } from '../utils/notificationScheduler';
 import { Fonts } from '../fonts';
 import { track } from '../services/analytics';
+import {
+  KEYBOARD_ACCESSORY_ID,
+  KeyboardDoneAccessory,
+} from '../components/KeyboardDoneAccessory';
 
 function timeToString(t: TimeOfDay): string {
   return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
@@ -101,10 +106,15 @@ export function OnboardingScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
     >
       <Text style={[styles.heading, { color: theme.text }]}>Welcome!</Text>
       <Text style={[styles.subheading, { color: theme.textSecondary }]}>
@@ -130,6 +140,7 @@ export function OnboardingScreen() {
         placeholder="e.g. 70"
         placeholderTextColor={theme.textSecondary}
         keyboardType="numeric"
+        inputAccessoryViewID={KEYBOARD_ACCESSORY_ID}
       />
       {weightError && <Text style={[styles.errorText, { color: theme.error }]}>{weightError}</Text>}
 
@@ -142,6 +153,7 @@ export function OnboardingScreen() {
         placeholder="e.g. 25"
         placeholderTextColor={theme.textSecondary}
         keyboardType="numeric"
+        inputAccessoryViewID={KEYBOARD_ACCESSORY_ID}
       />
       {ageError && <Text style={[styles.errorText, { color: theme.error }]}>{ageError}</Text>}
 
@@ -259,6 +271,8 @@ export function OnboardingScreen() {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    <KeyboardDoneAccessory />
+    </KeyboardAvoidingView>
   );
 }
 

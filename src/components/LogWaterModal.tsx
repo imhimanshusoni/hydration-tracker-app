@@ -12,6 +12,10 @@ import {
 } from 'react-native';
 import type { AppTheme } from '../theme';
 import { Fonts } from '../fonts';
+import {
+  KEYBOARD_ACCESSORY_ID,
+  KeyboardDoneAccessory,
+} from './KeyboardDoneAccessory';
 
 interface LogWaterModalProps {
   visible: boolean;
@@ -86,6 +90,7 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
                 onBlur={handleTextBlur}
                 maxLength={4}
                 placeholderTextColor={theme.textSecondary}
+                inputAccessoryViewID={KEYBOARD_ACCESSORY_ID}
               />
               <Text style={[styles.customUnit, { color: theme.textSecondary }]}>ml</Text>
             </View>
@@ -109,6 +114,7 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
           </TouchableOpacity>
         </View>
       </View>
+      <KeyboardDoneAccessory />
     </Modal>
   );
 }
