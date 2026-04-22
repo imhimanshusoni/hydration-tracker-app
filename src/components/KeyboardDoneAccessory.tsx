@@ -19,12 +19,22 @@ import { Fonts } from '../fonts';
 import { getTheme } from '../theme';
 
 export const KEYBOARD_ACCESSORY_ID = 'water-reminder-keyboard-done';
+// Secondary ID used when two numeric TextInputs sit on the same screen; sharing
+// one accessory across them can fail to re-attach on focus change (iOS quirk),
+// so each input binds its own InputAccessoryView instance via a distinct ID.
+export const KEYBOARD_ACCESSORY_ID_ALT = 'water-reminder-keyboard-done-alt';
 
-export function KeyboardDoneAccessory() {
+interface KeyboardDoneAccessoryProps {
+  nativeID?: string;
+}
+
+export function KeyboardDoneAccessory({
+  nativeID = KEYBOARD_ACCESSORY_ID,
+}: KeyboardDoneAccessoryProps = {}) {
   if (Platform.OS !== 'ios') return null;
   const theme = getTheme(null);
   return (
-    <InputAccessoryView nativeID={KEYBOARD_ACCESSORY_ID}>
+    <InputAccessoryView nativeID={nativeID}>
       <View
         style={[
           styles.bar,

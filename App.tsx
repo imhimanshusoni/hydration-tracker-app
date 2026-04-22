@@ -16,7 +16,11 @@ import { useWaterStore } from './src/store/useWaterStore';
 import { useGoalStore } from './src/store/useGoalStore';
 import { scheduleReminders } from './src/utils/notificationScheduler';
 import { HomeIcon, SettingsIcon } from './src/components/TabIcons';
-import { KeyboardDoneAccessory } from './src/components/KeyboardDoneAccessory';
+import {
+  KeyboardDoneAccessory,
+  KEYBOARD_ACCESSORY_ID,
+  KEYBOARD_ACCESSORY_ID_ALT,
+} from './src/components/KeyboardDoneAccessory';
 import { Fonts } from './src/fonts';
 import {
   initAnalytics,
@@ -148,7 +152,8 @@ function App() {
       ) : (
         <OnboardingScreen />
       )}
-      <KeyboardDoneAccessory />
+      <KeyboardDoneAccessory nativeID={KEYBOARD_ACCESSORY_ID} />
+      <KeyboardDoneAccessory nativeID={KEYBOARD_ACCESSORY_ID_ALT} />
     </SafeAreaProvider>
   );
 }
