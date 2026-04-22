@@ -35,7 +35,11 @@
 	</dict>
 	<key>NSHealthShareUsageDescription</key>
 	<string>WaterReminder reads your exercise data to adjust your daily water goal based on activity.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>WaterReminder does not write to Apple Health. It only reads your active minutes to adjust the daily water goal.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WaterReminder uses your location to check local weather and adjust your hydration goal.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>WaterReminder uses your location to check local weather and adjust your hydration goal.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
