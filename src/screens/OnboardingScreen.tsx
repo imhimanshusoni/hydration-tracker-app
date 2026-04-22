@@ -20,10 +20,7 @@ import type { TimeOfDay, Gender, ActivityLevel } from '../types';
 import { requestNotificationPermission } from '../utils/notificationScheduler';
 import { Fonts } from '../fonts';
 import { track } from '../services/analytics';
-import {
-  KEYBOARD_ACCESSORY_ID,
-  KeyboardDoneAccessory,
-} from '../components/KeyboardDoneAccessory';
+import { KEYBOARD_ACCESSORY_ID } from '../components/KeyboardDoneAccessory';
 
 function timeToString(t: TimeOfDay): string {
   return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
@@ -271,7 +268,6 @@ export function OnboardingScreen() {
         </Text>
       </TouchableOpacity>
     </ScrollView>
-    <KeyboardDoneAccessory />
     </KeyboardAvoidingView>
   );
 }

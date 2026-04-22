@@ -1,9 +1,9 @@
 // iOS-only "Done" bar that sits above the number-pad / decimal-pad keyboard
 // (which have no built-in Return key). Attach via inputAccessoryViewID on the
-// TextInput; render <KeyboardDoneAccessory /> once per screen.
-//
-// Required to dismiss numeric keyboards — without this, iOS leaves users
-// stranded on any screen that has a numeric TextInput at the bottom.
+// TextInput; render <KeyboardDoneAccessory /> exactly once at the app root
+// (App.tsx) so the native InputAccessoryView is registered with iOS before
+// any TextInput can be focused — otherwise the first focus on a fresh screen
+// races the native mount and renders without the accessory.
 
 import React from 'react';
 import {

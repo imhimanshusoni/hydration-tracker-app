@@ -40,10 +40,7 @@ import {
 } from '../utils/healthService';
 
 import { Fonts } from '../fonts';
-import {
-  KEYBOARD_ACCESSORY_ID,
-  KeyboardDoneAccessory,
-} from '../components/KeyboardDoneAccessory';
+import { KEYBOARD_ACCESSORY_ID } from '../components/KeyboardDoneAccessory';
 import { getTheme } from '../theme';
 import { useGoalStore } from '../store/useGoalStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -556,7 +553,6 @@ export function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
-      <KeyboardDoneAccessory />
     </KeyboardAvoidingView>
   );
 }

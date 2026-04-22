@@ -16,6 +16,7 @@ import { useWaterStore } from './src/store/useWaterStore';
 import { useGoalStore } from './src/store/useGoalStore';
 import { scheduleReminders } from './src/utils/notificationScheduler';
 import { HomeIcon, SettingsIcon } from './src/components/TabIcons';
+import { KeyboardDoneAccessory } from './src/components/KeyboardDoneAccessory';
 import { Fonts } from './src/fonts';
 import {
   initAnalytics,
@@ -147,6 +148,7 @@ function App() {
       ) : (
         <OnboardingScreen />
       )}
+      <KeyboardDoneAccessory />
     </SafeAreaProvider>
   );
 }
