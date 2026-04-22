@@ -6,7 +6,7 @@ One-time setup + repeatable release steps for the App Store. Sister doc to `RELE
 
 ### 1. Apple Developer Program
 
-You need an active Apple Developer Program membership ($99/yr) under team ID `456RK83FXL` (already wired into `ios/WaterReminder.xcodeproj/project.pbxproj` and `ios/ExportOptions.plist`). If the team ID changes, update both files.
+You need an active Apple Developer Program membership ($99/yr) under team ID `2TJ9K965G7` (already wired into `ios/WaterReminder.xcodeproj/project.pbxproj` and `ios/ExportOptions.plist`). If the team ID changes, update both files.
 
 ### 2. Register the App ID
 
@@ -137,7 +137,7 @@ npm run ios:export
 
 Output: `ios/build/ipa/WaterReminder.ipa` (~20–40 MB).
 
-Reads `ios/ExportOptions.plist` for method (`app-store-connect`) and team (`456RK83FXL`).
+Reads `ios/ExportOptions.plist` for method (`app-store-connect`) and team (`2TJ9K965G7`).
 
 (`ios:release` runs both 5 + 6 in sequence.)
 
