@@ -7,6 +7,9 @@
     "android:clean": "cd android && rm -rf app/.cxx && ./gradlew clean && cd ..",
     "android:release": "cd android && rm -rf build app/build .gradle && ./gradlew bundleRelease",
     "ios": "react-native run-ios",
+    "ios:archive": "cd ios && rm -rf build && xcodebuild -workspace WaterReminder.xcworkspace -scheme WaterReminder -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/WaterReminder.xcarchive archive",
+    "ios:export": "cd ios && xcodebuild -exportArchive -archivePath build/WaterReminder.xcarchive -exportPath build/ipa -exportOptionsPlist ExportOptions.plist",
+    "ios:release": "npm run ios:archive && npm run ios:export",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"
