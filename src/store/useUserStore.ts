@@ -4,7 +4,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage, writeWidgetData } from './mmkv';
-import { calculateDailyGoal } from '../utils/waterCalculator';
+import {
+  calculateDailyGoal,
+  calculateSmartGoal,
+  getWeatherBonusFromClimate,
+} from '../utils/waterCalculator';
 import type { TimeOfDay, UserProfile, Gender, ActivityLevel, ClimatePreference } from '../types';
 import { track, syncUserProfile, markUserCreated } from '../services/analytics';
 
@@ -43,7 +47,16 @@ export const useUserStore = create<UserState>()(
       dailyGoal: 2450,
 
       completeOnboarding: (profile) => {
-        const goal = calculateDailyGoal(profile.weight, profile.age);
+        // Same calculation (and inputs) as the wizard's goal reveal, so the
+        // stored goal equals the number the user just saw.
+        const { effectiveGoal: goal } = calculateSmartGoal({
+          weight: profile.weight,
+          age: profile.age,
+          gender: profile.gender,
+          activityLevel: profile.activityLevel,
+          weatherBonusMl: getWeatherBonusFromClimate(profile.climatePreference),
+          activeMinutesToday: 0,
+        });
         set({
           ...profile,
           dailyGoal: goal,

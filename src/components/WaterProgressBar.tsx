@@ -16,6 +16,11 @@ import Svg, {
 } from 'react-native-svg';
 import type { AppTheme } from '../theme';
 import { Fonts } from '../fonts';
+import {
+  formatGlasses,
+  formatGlassesShort,
+  formatMlOrL,
+} from '../utils/volumeFormat';
 
 interface WaterProgressBarProps {
   consumed: number;
@@ -34,8 +39,8 @@ export function WaterProgressBar({ consumed, dailyGoal, theme, celebrate }: Wate
   const progress = dailyGoal > 0 ? consumed / dailyGoal : 0;
   const clampedProgress = Math.min(progress, 1);
   const strokeDashoffset = CIRCUMFERENCE * (1 - clampedProgress);
-  const consumedL = (consumed / 1000).toFixed(1);
-  const goalL = (dailyGoal / 1000).toFixed(1);
+  // Glasses-first center: big glass count, exact ml/L beneath.
+  const consumedGlasses = formatGlassesShort(consumed);
 
   const innerRadius = RADIUS - STROKE_WIDTH / 2 - 6;
   const fillHeight = innerRadius * 2 * clampedProgress;
@@ -213,7 +218,7 @@ export function WaterProgressBar({ consumed, dailyGoal, theme, celebrate }: Wate
       <View style={styles.textContainer}>
         <View>
           <Text style={[styles.consumedValue, { color: theme.text }]}>
-            {consumedL}
+            {consumedGlasses}
           </Text>
           {/* Amber glow overlay — same position, animated opacity */}
           <Animated.Text
@@ -223,11 +228,14 @@ export function WaterProgressBar({ consumed, dailyGoal, theme, celebrate }: Wate
               { color: RIPPLE_COLOR, opacity: glowOpacity },
             ]}
           >
-            {consumedL}
+            {consumedGlasses}
           </Animated.Text>
         </View>
         <Text style={[styles.goalText, { color: theme.textSecondary }]}>
-          of {goalL} L
+          of {formatGlasses(dailyGoal)}
+        </Text>
+        <Text style={[styles.mlText, { color: theme.textSecondary }]}>
+          {formatMlOrL(consumed)} of {formatMlOrL(dailyGoal)}
         </Text>
       </View>
     </View>
@@ -260,6 +268,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.regular,
     marginTop: -2,
+  },
+  mlText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    marginTop: 4,
+    opacity: 0.7,
   },
   rippleRing: {
     position: 'absolute',

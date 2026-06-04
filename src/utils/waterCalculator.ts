@@ -7,6 +7,7 @@ import {
   MAX_GOAL_ML,
   ACTIVITY_BUMP_INTERVAL_MIN,
   ACTIVITY_BUMP_ML,
+  GLASS_SIZE_ML,
 } from '../config';
 
 export interface GoalCalculationInput {
@@ -50,7 +51,10 @@ export function calculateSmartGoal(input: GoalCalculationInput): GoalCalculation
     Math.floor(input.activeMinutesToday / ACTIVITY_BUMP_INTERVAL_MIN) * ACTIVITY_BUMP_ML;
 
   const raw = baseGoal + activityBonus + weatherBonus + activityBump;
-  const effectiveGoal = Math.min(MAX_GOAL_ML, Math.max(MIN_GOAL_ML, raw));
+  const clamped = Math.min(MAX_GOAL_ML, Math.max(MIN_GOAL_ML, raw));
+  // Snap to a whole number of glasses so the goal always reads as "N glasses".
+  // MIN/MAX are 250-multiples, so snapping never escapes the clamp range.
+  const effectiveGoal = Math.round(clamped / GLASS_SIZE_ML) * GLASS_SIZE_ML;
 
   return { baseGoal, activityBonus, weatherBonus, activityBump, effectiveGoal };
 }

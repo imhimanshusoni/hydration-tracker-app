@@ -8,7 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import notifee, { EventType } from '@notifee/react-native';
-import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { OnboardingWizard } from './src/screens/onboarding/OnboardingWizard';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { useUserStore } from './src/store/useUserStore';
@@ -88,20 +88,24 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = notifee.onForegroundEvent(async ({ type, detail }) => {
-      if (type === EventType.DELIVERED) {
-        await initAnalyticsForBackground();
-        const consumed = useWaterStore.getState().consumed;
-        const goal = useGoalStore.getState().effectiveGoal;
-        const scheduledHour = parseReminderHour(detail.notification?.data);
-        track('Reminder Delivered', {
-          scheduled_hour: scheduledHour,
-          consumed_ml: consumed,
-          goal_ml: goal,
-        });
-      } else if (type === EventType.PRESS) {
-        await initAnalyticsForBackground();
-        const scheduledHour = parseReminderHour(detail.notification?.data);
-        track('Reminder Tapped', { scheduled_hour: scheduledHour });
+      try {
+        if (type === EventType.DELIVERED) {
+          await initAnalyticsForBackground();
+          const consumed = useWaterStore.getState().consumed;
+          const goal = useGoalStore.getState().effectiveGoal;
+          const scheduledHour = parseReminderHour(detail.notification?.data);
+          track('Reminder Delivered', {
+            scheduled_hour: scheduledHour,
+            consumed_ml: consumed,
+            goal_ml: goal,
+          });
+        } else if (type === EventType.PRESS) {
+          await initAnalyticsForBackground();
+          const scheduledHour = parseReminderHour(detail.notification?.data);
+          track('Reminder Tapped', { scheduled_hour: scheduledHour });
+        }
+      } catch (e) {
+        console.warn('[notifications] foreground event handler failed', e);
       }
     });
     return unsubscribe;
@@ -134,10 +138,8 @@ function App() {
   useEffect(() => {
     if (onboardingComplete) {
       const { wakeUpTime, sleepTime, remindersEnabled } = useUserStore.getState();
-      const { consumed } = useWaterStore.getState();
       useGoalStore.getState().recalculateMorningGoal().then(() => {
-        const { effectiveGoal } = useGoalStore.getState();
-        scheduleReminders(wakeUpTime, sleepTime, consumed, effectiveGoal, remindersEnabled);
+        scheduleReminders(wakeUpTime, sleepTime, remindersEnabled);
       });
     }
   }, [onboardingComplete]);
@@ -150,7 +152,7 @@ function App() {
           <MainTabs />
         </NavigationContainer>
       ) : (
-        <OnboardingScreen />
+        <OnboardingWizard />
       )}
       <KeyboardDoneAccessory nativeID={KEYBOARD_ACCESSORY_ID} />
       <KeyboardDoneAccessory nativeID={KEYBOARD_ACCESSORY_ID_ALT} />

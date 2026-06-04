@@ -21,6 +21,11 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Fonts } from '../fonts';
+import {
+  formatGlasses,
+  formatGlassesShort,
+  formatMlOrL,
+} from '../utils/volumeFormat';
 import { LogWaterModal } from '../components/LogWaterModal';
 import { StreakCounter } from '../components/StreakCounter';
 import { WaterProgressBar } from '../components/WaterProgressBar';
@@ -34,7 +39,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../store/useUserStore';
 import { useWaterStore } from '../store/useWaterStore';
 
-const QUICK_LOG = [150, 250, 500];
+// ½ / 1 / 2 glasses exactly (GLASS_SIZE_ML = 250)
+const QUICK_LOG = [125, 250, 500];
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -100,14 +106,7 @@ export function HomeScreen() {
     const sub = AppState.addEventListener('change', state => {
       if (state === 'active') {
         checkMidnightReset();
-        const currentGoal = useGoalStore.getState().effectiveGoal;
-        scheduleReminders(
-          wakeUpTime,
-          sleepTime,
-          useWaterStore.getState().consumed,
-          currentGoal,
-          remindersEnabled,
-        );
+        scheduleReminders(wakeUpTime, sleepTime, remindersEnabled);
         // Check for activity bumps
         getTodayActiveMinutes().then(minutes => {
           useGoalStore.getState().applyActivityBump(minutes);
@@ -156,53 +155,7 @@ export function HomeScreen() {
     }
   }, [goalAdjustmentToast, goalToastOpacity, clearToast]);
 
-  const handleQuickLog = useCallback(
-    (amount: number) => {
-      logWater(amount, 'quick');
-      const newConsumed = consumed + amount;
-      scheduleReminders(
-        wakeUpTime,
-        sleepTime,
-        newConsumed,
-        effectiveGoal,
-        remindersEnabled,
-      );
-      showUndoToast();
-    },
-    [
-      consumed,
-      logWater,
-      wakeUpTime,
-      sleepTime,
-      effectiveGoal,
-      remindersEnabled,
-    ],
-  );
-
-  const handleModalLog = useCallback(
-    (amount: number) => {
-      logWater(amount, 'custom');
-      const newConsumed = consumed + amount;
-      scheduleReminders(
-        wakeUpTime,
-        sleepTime,
-        newConsumed,
-        effectiveGoal,
-        remindersEnabled,
-      );
-      showUndoToast();
-    },
-    [
-      consumed,
-      logWater,
-      wakeUpTime,
-      sleepTime,
-      effectiveGoal,
-      remindersEnabled,
-    ],
-  );
-
-  function showUndoToast() {
+  const showUndoToast = useCallback(() => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setShowUndo(true);
     Animated.timing(undoOpacity, {
@@ -217,29 +170,30 @@ export function HomeScreen() {
         useNativeDriver: true,
       }).start(() => setShowUndo(false));
     }, 5000);
-  }
+  }, [undoOpacity]);
+
+  const handleQuickLog = useCallback(
+    (amount: number) => {
+      logWater(amount, 'quick');
+      showUndoToast();
+    },
+    [logWater, showUndoToast],
+  );
+
+  const handleModalLog = useCallback(
+    (amount: number) => {
+      logWater(amount, 'custom');
+      showUndoToast();
+    },
+    [logWater, showUndoToast],
+  );
 
   const handleUndo = useCallback(() => {
     undoLastLog();
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setShowUndo(false);
     undoOpacity.setValue(0);
-    const reverted = useWaterStore.getState().consumed;
-    scheduleReminders(
-      wakeUpTime,
-      sleepTime,
-      reverted,
-      effectiveGoal,
-      remindersEnabled,
-    );
-  }, [
-    undoLastLog,
-    wakeUpTime,
-    sleepTime,
-    effectiveGoal,
-    remindersEnabled,
-    undoOpacity,
-  ]);
+  }, [undoLastLog, undoOpacity]);
 
   return (
     <View
@@ -281,7 +235,7 @@ export function HomeScreen() {
           <Text style={[styles.motivation, { color: theme.textSecondary }]}>
             {lastActiveMinutes} min active{'\u2009\u00B7\u2009'}
             <Text style={{ color: theme.accent, fontFamily: Fonts.medium }}>
-              +{activityBump}ml
+              +{formatMlOrL(activityBump)}
             </Text>
           </Text>
         ) : (
@@ -303,12 +257,17 @@ export function HomeScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.quickLogAmount, { color: theme.text }]}>
-                {ml}
+                {formatGlassesShort(ml)}
               </Text>
               <Text
                 style={[styles.quickLogUnit, { color: theme.textSecondary }]}
               >
-                ml
+                {ml <= 250 ? 'glass' : 'glasses'}
+              </Text>
+              <Text
+                style={[styles.quickLogMl, { color: theme.textSecondary }]}
+              >
+                {ml} ml
               </Text>
             </TouchableOpacity>
           ))}
@@ -332,7 +291,11 @@ export function HomeScreen() {
           <View style={styles.lastLogCard}>
             <View style={[styles.logDot, { backgroundColor: theme.accent }]} />
             <Text style={[styles.lastLogText, { color: theme.text }]}>
-              {lastLogAmount}ml
+              {formatGlasses(lastLogAmount ?? 0)}
+              <Text style={{ color: theme.textSecondary, fontFamily: Fonts.regular }}>
+                {'  ·  '}
+                {formatMlOrL(lastLogAmount ?? 0)}
+              </Text>
             </Text>
             <Text style={[styles.lastLogTime, { color: theme.textSecondary }]}>
               {formatLogTime(lastLoggedAt)}
@@ -363,7 +326,7 @@ export function HomeScreen() {
         >
           <View style={[styles.undoBar, { backgroundColor: theme.accent }]} />
           <Text style={[styles.undoText, { color: theme.text }]}>
-            +{lastLogAmount}ml
+            +{formatGlasses(lastLogAmount ?? 0)}
           </Text>
           <TouchableOpacity
             onPress={handleUndo}
@@ -437,6 +400,7 @@ const styles = StyleSheet.create({
   },
   quickLogAmount: { fontSize: 18, fontFamily: Fonts.bold },
   quickLogUnit: { fontSize: 11, fontFamily: Fonts.regular },
+  quickLogMl: { fontSize: 10, fontFamily: Fonts.regular, opacity: 0.7 },
   customButton: {
     flex: 1,
     alignItems: 'center',

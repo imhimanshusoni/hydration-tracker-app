@@ -9,6 +9,7 @@ import {
   getWeatherBonusFromTemp,
   getWeatherBonusFromClimate,
 } from '../utils/waterCalculator';
+import { formatGlasses } from '../utils/volumeFormat';
 import { fetchCurrentWeather } from '../utils/weatherService';
 import { getTodayActiveMinutes } from '../utils/healthService';
 import type { DailyGoalState, WeatherData } from '../types';
@@ -125,12 +126,11 @@ export const useGoalStore = create<GoalState>()(
           return;
         }
 
-        const goalL = (result.effectiveGoal / 1000).toFixed(1);
         set({
           activityBump: result.activityBump,
           effectiveGoal: result.effectiveGoal,
           lastActiveMinutes: newActiveMinutes,
-          goalAdjustmentToast: `Goal adjusted to ${goalL}L \u2014 you've been active!`,
+          goalAdjustmentToast: `Goal adjusted to ${formatGlasses(result.effectiveGoal)}, you've been active!`,
         });
 
         // Sync widget

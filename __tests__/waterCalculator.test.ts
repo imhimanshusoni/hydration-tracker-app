@@ -45,7 +45,8 @@ describe('calculateSmartGoal', () => {
     expect(result.activityBonus).toBe(0);
     expect(result.weatherBonus).toBe(0);
     expect(result.activityBump).toBe(0);
-    expect(result.effectiveGoal).toBe(2450);
+    // 2450 snapped to nearest glass (250 ml) → 2500
+    expect(result.effectiveGoal).toBe(2500);
   });
 
   it('applies female gender multiplier (0.9)', () => {
@@ -59,7 +60,8 @@ describe('calculateSmartGoal', () => {
     });
     // 70 * 35 * 0.9 = 2205
     expect(result.baseGoal).toBe(2205);
-    expect(result.effectiveGoal).toBe(2205);
+    // 2205 snapped to nearest glass → 2250
+    expect(result.effectiveGoal).toBe(2250);
   });
 
   it('applies age multiplier for age > 55', () => {
@@ -98,7 +100,8 @@ describe('calculateSmartGoal', () => {
       activeMinutesToday: 0,
     });
     expect(result.activityBonus).toBe(350);
-    expect(result.effectiveGoal).toBe(2800);
+    // 2450 + 350 = 2800, snapped to nearest glass → 2750
+    expect(result.effectiveGoal).toBe(2750);
   });
 
   it('adds active activity bonus', () => {
@@ -111,7 +114,8 @@ describe('calculateSmartGoal', () => {
       activeMinutesToday: 0,
     });
     expect(result.activityBonus).toBe(700);
-    expect(result.effectiveGoal).toBe(3150);
+    // 2450 + 700 = 3150, snapped to nearest glass → 3250
+    expect(result.effectiveGoal).toBe(3250);
   });
 
   it('adds weather bonus', () => {
@@ -124,8 +128,8 @@ describe('calculateSmartGoal', () => {
       activeMinutesToday: 0,
     });
     expect(result.weatherBonus).toBe(500);
-    // base 2205 + activity 350 + weather 500 = 3055
-    expect(result.effectiveGoal).toBe(3055);
+    // base 2205 + activity 350 + weather 500 = 3055, snapped to nearest glass → 3000
+    expect(result.effectiveGoal).toBe(3000);
   });
 
   it('computes activity bump correctly for 30-min blocks', () => {
@@ -184,6 +188,18 @@ describe('calculateSmartGoal', () => {
     });
     // 200*35=7000 + 700 + 750 + 1400 = 9850, clamped to 5000
     expect(result.effectiveGoal).toBe(5000);
+  });
+
+  it('always snaps effectiveGoal to a whole number of glasses (250 ml)', () => {
+    const inputs = [
+      { weight: 60, age: 30, gender: 'female' as const, activityLevel: 'moderate' as const, weatherBonusMl: 200, activeMinutesToday: 0 },
+      { weight: 85, age: 47, gender: 'male' as const, activityLevel: 'active' as const, weatherBonusMl: 500, activeMinutesToday: 45 },
+      { weight: 52, age: 70, gender: 'other' as const, activityLevel: 'sedentary' as const, weatherBonusMl: 0, activeMinutesToday: 0 },
+    ];
+    for (const input of inputs) {
+      const { effectiveGoal } = calculateSmartGoal(input);
+      expect(effectiveGoal % 250).toBe(0);
+    }
   });
 
   it('other gender uses multiplier 1.0', () => {

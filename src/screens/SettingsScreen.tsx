@@ -40,12 +40,12 @@ import {
 } from '../utils/healthService';
 
 import { Fonts } from '../fonts';
+import { formatGlasses, formatMlOrL } from '../utils/volumeFormat';
 import { KEYBOARD_ACCESSORY_ID } from '../components/KeyboardDoneAccessory';
 import { getTheme } from '../theme';
 import { useGoalStore } from '../store/useGoalStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../store/useUserStore';
-import { useWaterStore } from '../store/useWaterStore';
 
 function timeToString(t: TimeOfDay): string {
   return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(
@@ -76,8 +76,6 @@ export function SettingsScreen() {
   const weatherBonus = useGoalStore(s => s.weatherBonus);
   const activityBonus = useGoalStore(s => s.activityBonus);
   const activityBump = useGoalStore(s => s.activityBump);
-
-  const consumed = useWaterStore(s => s.consumed);
 
   const [nameText, setNameText] = useState(name);
   const [weightText, setWeightText] = useState(String(weight));
@@ -140,13 +138,7 @@ export function SettingsScreen() {
         minute: date.getMinutes(),
       };
       updateSchedule({ wakeUpTime: newWake });
-      scheduleReminders(
-        newWake,
-        sleepTime,
-        consumed,
-        effectiveGoal,
-        remindersEnabled,
-      );
+      scheduleReminders(newWake, sleepTime, remindersEnabled);
     }
   }
 
@@ -158,20 +150,14 @@ export function SettingsScreen() {
         minute: date.getMinutes(),
       };
       updateSchedule({ sleepTime: newSleep });
-      scheduleReminders(
-        wakeUpTime,
-        newSleep,
-        consumed,
-        effectiveGoal,
-        remindersEnabled,
-      );
+      scheduleReminders(wakeUpTime, newSleep, remindersEnabled);
     }
   }
 
   function handleReminderToggle(value: boolean) {
     setRemindersEnabled(value);
     if (value) {
-      scheduleReminders(wakeUpTime, sleepTime, consumed, effectiveGoal, true);
+      scheduleReminders(wakeUpTime, sleepTime, true);
     } else {
       cancelAllReminders();
     }
@@ -183,10 +169,6 @@ export function SettingsScreen() {
     return d;
   }
 
-  const goalL = (effectiveGoal / 1000).toFixed(1);
-  const baseL = (baseGoal / 1000).toFixed(1);
-  const weatherL = (weatherBonus / 1000).toFixed(1);
-  const activityTotalL = ((activityBonus + activityBump) / 1000).toFixed(1);
 
   return (
     <KeyboardAvoidingView
@@ -355,10 +337,14 @@ export function SettingsScreen() {
             Your daily goal
           </Text>
           <Text style={[styles.goalValue, { color: theme.text }]}>
-            {goalL} L
+            {formatGlasses(effectiveGoal)}
+          </Text>
+          <Text style={[styles.goalSecondary, { color: theme.textSecondary }]}>
+            {formatMlOrL(effectiveGoal)}
           </Text>
           <Text style={[styles.goalBreakdown, { color: theme.textSecondary }]}>
-            Base {baseL}L + Weather +{weatherL}L + Activity +{activityTotalL}L
+            Base {formatMlOrL(baseGoal)} + Weather +{formatMlOrL(weatherBonus)}{' '}
+            + Activity +{formatMlOrL(activityBonus + activityBump)}
           </Text>
         </View>
 
@@ -632,6 +618,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontFamily: Fonts.light,
     letterSpacing: -1,
+  },
+  goalSecondary: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    marginTop: 2,
   },
   goalBreakdown: {
     fontSize: 12,

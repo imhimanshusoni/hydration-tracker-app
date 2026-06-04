@@ -9,8 +9,7 @@ export const EVENT_NAMES = [
   'App Backgrounded',
   'Screen Viewed',
   'Onboarding Started',
-  // NOTE: Onboarding is single-screen today — see docs/analytics.md Known gaps
-  // for reintroducing 'Onboarding Step Completed' if multi-step onboarding ships.
+  'Onboarding Step Completed',
   'Onboarding Completed',
   'Water Logged',
   'Log Undone',
@@ -47,6 +46,11 @@ export type EventMap = {
   'App Backgrounded': { foreground_duration_sec: number };
   'Screen Viewed': { screen_name: string; previous_screen: string | null };
   'Onboarding Started': never;
+  'Onboarding Step Completed': {
+    step: number; // 1-based index of the step just completed
+    step_name: 'name' | 'body' | 'activity' | 'schedule';
+    duration_sec: number; // time spent on that step
+  };
   'Onboarding Completed': { duration_sec: number };
   'Water Logged': {
     amount_ml: number;

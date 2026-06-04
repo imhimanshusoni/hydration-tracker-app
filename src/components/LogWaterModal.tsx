@@ -13,6 +13,11 @@ import {
 import type { AppTheme } from '../theme';
 import { Fonts } from '../fonts';
 import { KEYBOARD_ACCESSORY_ID } from './KeyboardDoneAccessory';
+import {
+  formatGlasses,
+  formatGlassesShort,
+  formatGlassesHint,
+} from '../utils/volumeFormat';
 
 interface LogWaterModalProps {
   visible: boolean;
@@ -21,7 +26,8 @@ interface LogWaterModalProps {
   theme: AppTheme;
 }
 
-const PRESETS = [150, 250, 500];
+// ½ / 1 / 2 glasses exactly (GLASS_SIZE_ML = 250)
+const PRESETS = [125, 250, 500];
 const MIN_CUSTOM = 50;
 const MAX_CUSTOM = 1000;
 
@@ -69,8 +75,14 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
                 onPress={() => handlePreset(ml)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.presetValue, { color: theme.text }]}>{ml}</Text>
-                <Text style={[styles.presetUnit, { color: theme.textSecondary }]}>ml</Text>
+                <Text style={[styles.presetValue, { color: theme.text }]}>
+                  {formatGlassesShort(ml)}
+                </Text>
+                <Text style={[styles.presetUnit, { color: theme.textSecondary }]}>
+                  {ml <= 250 ? 'glass' : 'glasses'}
+                  {' · '}
+                  {ml} ml
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -91,6 +103,11 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
               />
               <Text style={[styles.customUnit, { color: theme.textSecondary }]}>ml</Text>
             </View>
+            {customAmount > 0 && (
+              <Text style={[styles.glassesHint, { color: theme.textSecondary }]}>
+                {formatGlassesHint(customAmount)}
+              </Text>
+            )}
             <View style={styles.rangeRow}>
               <Text style={[styles.rangeText, { color: theme.textSecondary }]}>{MIN_CUSTOM}</Text>
               <View style={[styles.rangeLine, { backgroundColor: theme.border }]} />
@@ -103,7 +120,9 @@ export function LogWaterModal({ visible, onClose, onLog, theme }: LogWaterModalP
             onPress={handleCustomLog}
             activeOpacity={0.8}
           >
-            <Text style={styles.logButtonText}>Log {customAmount} ml</Text>
+            <Text style={styles.logButtonText}>
+              Log {formatGlasses(customAmount)} ({customAmount} ml)
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.6}>
@@ -144,6 +163,7 @@ const styles = StyleSheet.create({
   customInputRow: { flexDirection: 'row', alignItems: 'baseline' },
   customInput: { fontSize: 32, fontFamily: Fonts.light, minWidth: 80 },
   customUnit: { fontSize: 16, fontFamily: Fonts.regular, marginLeft: 4 },
+  glassesHint: { fontSize: 14, fontFamily: Fonts.regular, marginTop: 4 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   rangeLine: { flex: 1, height: 1 },
   rangeText: { fontSize: 11, fontFamily: Fonts.regular },

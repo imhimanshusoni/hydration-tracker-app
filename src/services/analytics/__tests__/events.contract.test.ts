@@ -15,6 +15,7 @@ const SAMPLE_PROPS: { [K in keyof EventMap]: EventMap[K] extends never ? null : 
   'App Backgrounded': { foreground_duration_sec: 0 },
   'Screen Viewed': { screen_name: 'Home', previous_screen: null },
   'Onboarding Started': null as never,
+  'Onboarding Step Completed': { step: 1, step_name: 'name', duration_sec: 12 },
   'Onboarding Completed': { duration_sec: 0 },
   'Water Logged': { amount_ml: 0, source: 'quick', local_hour: 0, pct_of_goal_after: 0, is_first_log_of_day: true },
   'Log Undone': { amount_ml: 0, time_since_log_sec: 0 },
