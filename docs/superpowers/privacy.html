@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta
+      name="description"
+      content="Water Reminder — Privacy Policy. What the app collects, where it goes, and your rights under GDPR, CCPA, and India's DPDP Act 2023."
+    />
+    <title>Water Reminder — Privacy Policy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    />
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: #060b18;
+        --surface: #0d1b2a;
+        --surface-elevated: #132840;
+        --fg: #f0f4f8;
+        --fg-muted: #7a8ba8;
+        --accent: #3b9fe3;
+        --accent-warm: #f0a050;
+        --border: #1b2d45;
+        --max-width: 720px;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f9fc;
+          --surface: #ffffff;
+          --surface-elevated: #eef4fb;
+          --fg: #0b1526;
+          --fg-muted: #5a6b85;
+          --accent: #2079c4;
+          --accent-warm: #c97a1f;
+          --border: #dce4ef;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        padding: clamp(28px, 5vw, 56px) clamp(18px, 4vw, 28px) 96px;
+        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          Roboto, sans-serif;
+        font-size: 16px;
+        line-height: 1.65;
+        font-weight: 400;
+        color: var(--fg);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      main {
+        max-width: var(--max-width);
+        margin: 0 auto;
+      }
+
+      /* Header lockup */
+      .lockup {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+      .lockup-mark {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+        display: inline-block;
+        transform: translateY(-1px);
+      }
+      .lockup-brand {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+      h1 {
+        font-size: clamp(30px, 6vw, 40px);
+        line-height: 1.1;
+        margin: 0 0 6px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .tagline {
+        font-size: clamp(15px, 3.2vw, 17px);
+        color: var(--fg-muted);
+        margin: 0 0 4px;
+        font-weight: 400;
+      }
+      .meta {
+        color: var(--fg-muted);
+        font-size: 13px;
+        letter-spacing: 0.2px;
+        margin: 12px 0 0;
+      }
+      .meta strong {
+        color: var(--fg);
+        font-weight: 600;
+      }
+
+      /* Section headings */
+      h2 {
+        font-size: clamp(19px, 4vw, 23px);
+        line-height: 1.25;
+        margin: 48px 0 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        font-size: 16px;
+        line-height: 1.4;
+        margin: 20px 0 8px;
+        font-weight: 600;
+        color: var(--fg);
+      }
+
+      p {
+        margin: 0.8em 0;
+      }
+      ul {
+        margin: 0.8em 0;
+        padding-left: 1.25em;
+      }
+      li {
+        margin: 0.4em 0;
+      }
+      li::marker {
+        color: var(--fg-muted);
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 120ms ease;
+      }
+      a:hover,
+      a:focus-visible {
+        border-bottom-color: var(--accent);
+      }
+      strong {
+        font-weight: 600;
+        color: var(--fg);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+          monospace;
+        font-size: 0.92em;
+        padding: 1px 6px;
+        border-radius: 5px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+      }
+
+      /* Card primitives mirror the app's card rhythm */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: clamp(20px, 4vw, 28px);
+        margin: 20px 0;
+      }
+      .card--elevated {
+        background: var(--surface-elevated);
+        border: 1px solid transparent;
+      }
+      .card--note {
+        border-left: 3px solid var(--accent-warm);
+        border-top-left-radius: 6px;
+        border-bottom-left-radius: 6px;
+      }
+      .card h2,
+      .card h3 {
+        margin-top: 0;
+      }
+      .card > *:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Summary card (hero-ish) */
+      .summary-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1.3px;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        margin: 0 0 12px;
+      }
+      .summary-list {
+        padding-left: 1.1em;
+      }
+      .summary-list li {
+        margin: 0.6em 0;
+      }
+
+      /* Contact block */
+      .contact-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .contact-email {
+        display: inline-block;
+        padding: 10px 16px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+          monospace;
+        font-size: 0.95em;
+        font-weight: 600;
+        color: var(--accent);
+        text-decoration: none;
+        align-self: flex-start;
+        transition: border-color 120ms ease;
+      }
+      .contact-email:hover,
+      .contact-email:focus-visible {
+        border-color: var(--accent);
+      }
+
+      /* Footer */
+      footer {
+        margin-top: 72px;
+        padding-top: 32px;
+        border-top: 1px solid var(--border);
+        color: var(--fg-muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      footer .entity {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      footer p {
+        margin: 0.3em 0;
+      }
+      footer .links {
+        margin-top: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+      }
+      footer .links a {
+        color: var(--fg-muted);
+        border-bottom: 1px solid var(--border);
+      }
+      footer .links a:hover,
+      footer .links a:focus-visible {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      @media (max-width: 480px) {
+        body {
+          font-size: 15.5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="lockup">
+          <span class="lockup-mark" aria-hidden="true"></span>
+          <span class="lockup-brand">Water Reminder · by Habuild</span>
+        </div>
+        <h1>Privacy Policy</h1>
+        <p class="tagline">
+          What the app collects, where it goes, and what you can do about it.
+        </p>
+        <p class="meta"><strong>Last updated:</strong> 2026-04-22</p>
+      </header>
+
+      <p>
+        Water Reminder is a personal hydration tracker for iOS and Android,
+        built by Habuild Healthtech Private Limited (“Habuild”, “we”, “us”).
+        This policy describes what data the app itself collects, processes, or
+        shares. It sits alongside our
+        <a
+          href="https://habuild.in/privacypolicy"
+          rel="noopener noreferrer"
+          target="_blank"
+          >corporate privacy policy</a
+        >, which covers Habuild’s broader website and services.
+      </p>
+
+      <section class="card card--elevated" aria-labelledby="summary-label">
+        <p id="summary-label" class="summary-label">The short version</p>
+        <ul class="summary-list">
+          <li>
+            Your profile and water logs are stored
+            <strong>on your device</strong>. No sync. No cloud account.
+          </li>
+          <li>
+            Product analytics — profile fields and app events — are sent to
+            <strong>Mixpanel</strong> (EU region). No email, no phone number,
+            no precise location.
+          </li>
+          <li>
+            If you allow location, we make one request to
+            <strong>OpenWeatherMap</strong> per goal recalculation to factor
+            weather into your hydration goal.
+          </li>
+          <li>
+            Uninstalling the app wipes all on-device data. Mixpanel deletion is
+            available on request.
+          </li>
+        </ul>
+      </section>
+
+      <h2>What’s stored on your device</h2>
+
+      <div class="card">
+        <p>
+          The following is persisted locally using MMKV and never transmitted
+          by us:
+        </p>
+        <ul>
+          <li>
+            Display name, weight, age, gender, activity level, climate
+            preference, wake-up and sleep times, daily hydration goal.
+          </li>
+          <li>Your daily water-log history (rolling 30 days).</li>
+          <li>Streak counts and goal-celebration state.</li>
+          <li>App preferences — reminders on/off, Health-integration grants.</li>
+        </ul>
+        <p>Uninstalling the app permanently removes this data.</p>
+      </div>
+
+      <h2>What Mixpanel receives</h2>
+
+      <div class="card">
+        <p>
+          We use Mixpanel (Mixpanel, Inc., EU data residency) for product
+          analytics — to understand usage patterns and improve the app. The
+          following profile fields are attached to your Mixpanel user record:
+        </p>
+        <ul>
+          <li>Display name (as entered in Settings)</li>
+          <li>Weight (kg), age (years), gender</li>
+          <li>Activity level, climate preference</li>
+          <li>Wake-up and sleep times</li>
+          <li>Daily hydration goal (ml)</li>
+          <li>Install date</li>
+          <li>Platform (iOS / Android), app version, build number</li>
+        </ul>
+        <p>
+          <strong>Product events</strong> are sent alongside — hydration logs,
+          goal-met events, screen views, app open/close, notification
+          delivery/tap counts, onboarding steps, health-permission prompts,
+          profile edits. These events carry the profile fields above as
+          super-properties for segmentation.
+        </p>
+        <h3>What we never send to Mixpanel</h3>
+        <ul>
+          <li>Email addresses, phone numbers, passwords, payment data.</li>
+          <li>Precise GPS coordinates.</li>
+          <li>Contents of reminder notifications.</li>
+          <li>
+            Apple Health / Health Connect raw data — only a derived active-minute
+            count used to calculate the goal bump.
+          </li>
+        </ul>
+        <p>
+          Mixpanel’s own privacy policy:
+          <a
+            href="https://mixpanel.com/legal/privacy-policy/"
+            rel="noopener noreferrer"
+            target="_blank"
+            >mixpanel.com/legal/privacy-policy</a
+          >.
+        </p>
+      </div>
+
+      <h2>Weather — OpenWeatherMap</h2>
+
+      <div class="card">
+        <p>
+          Your smart daily goal accounts for local weather. Each time the goal
+          recalculates (morning or on-demand), your device sends one request to
+          OpenWeatherMap containing your approximate latitude and longitude.
+          OpenWeatherMap receives only the coordinates — no name, no device
+          identifier, no usage history.
+        </p>
+        <p>We do not retain your location history.</p>
+        <p>
+          OpenWeatherMap’s privacy policy:
+          <a
+            href="https://openweather.co.uk/privacy-policy"
+            rel="noopener noreferrer"
+            target="_blank"
+            >openweather.co.uk/privacy-policy</a
+          >.
+        </p>
+      </div>
+
+      <h2>Optional: Apple Health / Android Health Connect</h2>
+
+      <div class="card">
+        <p>
+          If you grant permission, Water Reminder reads
+          <strong>active minutes</strong> from Apple Health (iOS) or Health
+          Connect (Android) to fine-tune your daily goal. The raw health data
+          never leaves your device. Only a derived adjustment (for example,
+          “+350 ml from today’s activity”) is sent to Mixpanel as part of
+          goal-recalculation events.
+        </p>
+        <p>
+          You can revoke access at any time via iOS Settings → Privacy & Security
+          → Health → Water Reminder, or (on Android) Settings → Apps → Water
+          Reminder → Permissions.
+        </p>
+      </div>
+
+      <h2>Notifications</h2>
+
+      <div class="card">
+        <p>
+          Hydration reminders are scheduled and delivered
+          <strong>locally</strong> by your device’s notification system. The
+          reminder text shows your current progress (e.g. “1.2 L of 2.8 L
+          today”) — this content never leaves your device.
+        </p>
+        <p>
+          Anonymized delivery and tap counts are sent to Mixpanel, tagged with
+          the scheduled hour, your current consumption, and your current goal.
+          No notification body text is transmitted.
+        </p>
+      </div>
+
+      <h2>Your rights</h2>
+
+      <div class="card">
+        <ul>
+          <li>
+            <strong>Access</strong> — the app’s Settings screen surfaces every
+            personal field we hold.
+          </li>
+          <li>
+            <strong>Correction</strong> — edit any profile field in Settings;
+            changes sync to Mixpanel automatically.
+          </li>
+          <li>
+            <strong>Deletion</strong> — uninstalling the app wipes local data
+            permanently. To also delete your Mixpanel profile, email the
+            address below. Requests are actioned within 30 days under GDPR,
+            CCPA, and India’s DPDP Act 2023.
+          </li>
+          <li>
+            <strong>Portability</strong> — on-device data is not sync’d today,
+            so there is nothing to export. If this changes, we will update this
+            policy and note it in release notes.
+          </li>
+          <li>
+            <strong>Analytics opt-out</strong> — a Settings toggle is planned
+            for a future release. Until it ships, uninstalling opts you out.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Children’s privacy</h2>
+
+      <div class="card card--note">
+        <p>
+          Water Reminder is not directed to children under 13. Under India’s
+          <strong>Digital Personal Data Protection Act, 2023</strong>, users
+          under 18 are treated as children and require verifiable consent from
+          a parent or lawful guardian before their data is processed. We do not
+          knowingly collect data from users in either category. If you believe
+          a child has provided us with personal data, contact us at the email
+          below and we will delete it promptly.
+        </p>
+      </div>
+
+      <h2>Jurisdiction &amp; compliance</h2>
+
+      <div class="card">
+        <p>
+          Habuild is headquartered in Nagpur, Maharashtra, India. This policy
+          is governed by the laws of the Republic of India. It complies with
+          the <strong>Information Technology Act, 2000</strong> and the
+          <strong>Digital Personal Data Protection Act, 2023</strong>. For
+          users in the European Economic Area, United Kingdom, and California,
+          we also honour rights granted by the GDPR and CCPA. Disputes will be
+          handled as described in our
+          <a
+            href="https://habuild.in/privacypolicy"
+            rel="noopener noreferrer"
+            target="_blank"
+            >corporate privacy policy</a
+          >.
+        </p>
+      </div>
+
+      <h2>Changes to this policy</h2>
+
+      <p>
+        We may update this policy when we add or change features. The
+        “Last updated” date at the top reflects the most recent change. If a
+        change materially affects what data is collected or shared, we will
+        call it out in the release notes for the version that introduces it.
+      </p>
+
+      <h2>Contact</h2>
+
+      <div class="card contact-card">
+        <div>
+          <p style="margin-top: 0">
+            For privacy questions, data-deletion requests, or any concern about
+            how the app handles your information:
+          </p>
+          <a href="mailto:engineering@habuild.in" class="contact-email"
+            >engineering@habuild.in</a
+          >
+        </div>
+        <p style="margin: 0; color: var(--fg-muted); font-size: 0.95em">
+          For broader company or website privacy queries, write to
+          <a href="mailto:yogaeveryday@habuild.in">yogaeveryday@habuild.in</a>
+          or use the channels listed in our
+          <a
+            href="https://habuild.in/privacypolicy"
+            rel="noopener noreferrer"
+            target="_blank"
+            >corporate privacy policy</a
+          >.
+        </p>
+      </div>
+
+      <footer>
+        <p class="entity">Habuild Healthtech Private Limited</p>
+        <p>Bothra Complex, Model Mill Square, Ganeshpeth Colony</p>
+        <p>Nagpur, Maharashtra 440018, India</p>
+        <p class="links">
+          <a href="support.html">Support</a>
+          <a
+            href="https://habuild.in/privacypolicy"
+            rel="noopener noreferrer"
+            target="_blank"
+            >Corporate privacy</a
+          >
+          <a
+            href="https://habuild.in/termsconditions"
+            rel="noopener noreferrer"
+            target="_blank"
+            >Terms of Use</a
+          >
+          <a href="https://habuild.in/" rel="noopener noreferrer" target="_blank"
+            >habuild.in</a
+          >
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

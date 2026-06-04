@@ -6,6 +6,7 @@ import notifee, {
   TriggerType,
   TimestampTrigger,
   AndroidImportance,
+  RepeatFrequency,
 } from '@notifee/react-native';
 import type { TimeOfDay } from '../types';
 
@@ -35,61 +36,74 @@ export async function cancelAllReminders(): Promise<void> {
   }
 }
 
-// Schedules hourly reminders between wake-up and sleep for today.
-// Cancels all existing reminders first, then creates new ones.
-// Skips hours already past. Called on every water log so notification
-// messages always reflect current consumption.
+// Schedules daily-repeating hourly reminders between wake-up and sleep.
+// Cancels all existing reminders first, then creates new ones. The OS
+// repeats each trigger every day, so reminders keep firing even if the
+// app is never reopened.
 export async function scheduleReminders(
   wakeUp: TimeOfDay,
   sleep: TimeOfDay,
-  consumed: number,
-  dailyGoal: number,
   remindersEnabled: boolean,
 ): Promise<void> {
-  await cancelAllReminders();
+  try {
+    await cancelAllReminders();
 
-  if (!remindersEnabled) return;
+    if (!remindersEnabled) return;
 
-  await ensureChannel();
+    await ensureChannel();
 
-  const now = new Date();
-  const consumedL = (consumed / 1000).toFixed(1);
-  const goalL = (dailyGoal / 1000).toFixed(1);
+    const now = new Date();
 
-  for (let hour = wakeUp.hour; hour <= sleep.hour; hour++) {
-    const fireDate = new Date();
-    fireDate.setHours(hour, 0, 0, 0);
+    // When today's goal is already met, suppress the rest of today's reminders
+    // by anchoring EVERY hour to tomorrow. The DAILY repeat resumes tomorrow
+    // with no app reopen needed. Lazy require keeps this file free of static
+    // store imports (callable from any context, no circular-import risk).
+    const { isDailyGoalMet } = require('../store/useWaterStore');
+    const goalMetToday: boolean = isDailyGoalMet();
 
-    // Skip if this hour has already passed
-    if (fireDate.getTime() <= now.getTime()) continue;
+    for (let hour = wakeUp.hour; hour <= sleep.hour; hour++) {
+      const fireDate = new Date();
+      fireDate.setHours(hour, 0, 0, 0);
 
-    const trigger: TimestampTrigger = {
-      type: TriggerType.TIMESTAMP,
-      timestamp: fireDate.getTime(),
-    };
+      // Android rejects past timestamps, so anchor hours already past to
+      // tomorrow. Harmless on iOS — DAILY repeats only use the time of day.
+      if (goalMetToday || fireDate.getTime() <= now.getTime()) {
+        fireDate.setDate(fireDate.getDate() + 1);
+      }
 
-    await notifee.createTriggerNotification(
-      {
-        id: `${NOTIFICATION_ID_PREFIX}${hour}`,
-        title: 'Water Reminder',
-        body: `Time to drink water! You've had ${consumedL}L of ${goalL}L today.`,
-        data: { hour: String(hour) },
-        android: {
-          channelId: CHANNEL_ID,
-          pressAction: { id: 'default' },
-        },
-        ios: {
-          sound: 'water_drop.wav',
-          interruptionLevel: 'timeSensitive',
-          foregroundPresentationOptions: {
-            sound: true,
-            banner: true,
-            list: true,
-            badge: true,
+      const trigger: TimestampTrigger = {
+        type: TriggerType.TIMESTAMP,
+        timestamp: fireDate.getTime(),
+        repeatFrequency: RepeatFrequency.DAILY,
+      };
+
+      await notifee.createTriggerNotification(
+        {
+          id: `${NOTIFICATION_ID_PREFIX}${hour}`,
+          title: 'Water Reminder',
+          body: 'Time to drink water! Stay on track with your hydration goal.',
+          data: { hour: String(hour) },
+          android: {
+            channelId: CHANNEL_ID,
+            pressAction: { id: 'default' },
+          },
+          ios: {
+            sound: 'water_drop.wav',
+            interruptionLevel: 'timeSensitive',
+            foregroundPresentationOptions: {
+              sound: true,
+              banner: true,
+              list: true,
+              badge: true,
+            },
           },
         },
-      },
-      trigger,
-    );
+        trigger,
+      );
+    }
+  } catch (e) {
+    // Call sites don't await this; without the catch a failure here would be
+    // an invisible unhandled rejection.
+    console.warn('[notifications] scheduleReminders failed', e);
   }
 }

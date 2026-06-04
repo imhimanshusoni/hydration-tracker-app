@@ -33,6 +33,22 @@ jest.mock('react-native-geolocation-service', () => ({
 
 jest.mock('react-native-config', () => ({ OPENWEATHERMAP_API_KEY: '' }));
 
+// logWater crossing 100% now reschedules reminders (goal-aware suppression),
+// which lazily requires the notifee-based scheduler.
+jest.mock('@notifee/react-native', () => ({
+  __esModule: true,
+  default: {
+    createChannel: jest.fn().mockResolvedValue(undefined),
+    requestPermission: jest.fn().mockResolvedValue({ authorizationStatus: 1 }),
+    createTriggerNotification: jest.fn().mockResolvedValue(undefined),
+    cancelAllNotifications: jest.fn().mockResolvedValue(undefined),
+    getTriggerNotificationIds: jest.fn().mockResolvedValue([]),
+  },
+  TriggerType: { TIMESTAMP: 0 },
+  RepeatFrequency: { NONE: -1, HOURLY: 0, DAILY: 1, WEEKLY: 2 },
+  AndroidImportance: { DEFAULT: 3, HIGH: 4 },
+}));
+
 jest.mock('../src/services/analytics', () => ({
   track: jest.fn(),
   initAnalytics: jest.fn().mockResolvedValue(undefined),

@@ -42,6 +42,7 @@ jest.mock('@notifee/react-native', () => ({
     onBackgroundEvent: jest.fn(),
   },
   TriggerType: {TIMESTAMP: 0},
+  RepeatFrequency: {NONE: -1, HOURLY: 0, DAILY: 1, WEEKLY: 2},
   AndroidImportance: {DEFAULT: 3, HIGH: 4},
   EventType: {DELIVERED: 3, PRESS: 1, DISMISSED: 0, ACTION_PRESS: 2},
 }));

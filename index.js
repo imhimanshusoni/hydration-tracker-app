@@ -30,28 +30,34 @@ import {
 // promise). The rehydrate() await is still safe there — Zustand treats repeat
 // calls as idempotent.
 notifee.onBackgroundEvent(async ({ type, detail }) => {
-  if (type !== EventType.DELIVERED && type !== EventType.PRESS) return;
+  try {
+    if (type !== EventType.DELIVERED && type !== EventType.PRESS) return;
 
-  await initAnalyticsForBackground();
+    await initAnalyticsForBackground();
 
-  if (type === EventType.DELIVERED) {
-    await useWaterStore.persist.rehydrate();
-    const consumed = useWaterStore.getState().consumed;
-    const goal = useGoalStore.getState().effectiveGoal;
+    if (type === EventType.DELIVERED) {
+      await useWaterStore.persist.rehydrate();
+      const consumed = useWaterStore.getState().consumed;
+      const goal = useGoalStore.getState().effectiveGoal;
+      const scheduledHour = parseReminderHour(detail.notification?.data);
+      track('Reminder Delivered', {
+        scheduled_hour: scheduledHour,
+        consumed_ml: consumed,
+        goal_ml: goal,
+      });
+      await flush();
+      return;
+    }
+
+    // PRESS
     const scheduledHour = parseReminderHour(detail.notification?.data);
-    track('Reminder Delivered', {
-      scheduled_hour: scheduledHour,
-      consumed_ml: consumed,
-      goal_ml: goal,
-    });
+    track('Reminder Tapped', { scheduled_hour: scheduledHour });
     await flush();
-    return;
+  } catch (e) {
+    // A throw here (analytics init / rehydrate on a fresh Android VM) would
+    // otherwise die as a silent unhandled rejection with no crash reporting.
+    console.warn('[notifications] background event handler failed', e);
   }
-
-  // PRESS
-  const scheduledHour = parseReminderHour(detail.notification?.data);
-  track('Reminder Tapped', { scheduled_hour: scheduledHour });
-  await flush();
 });
 
 function parseReminderHour(data) {

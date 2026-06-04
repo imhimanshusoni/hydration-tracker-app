@@ -13,6 +13,25 @@ import { track } from '../services/analytics';
 // the string-literal union makes a mismatch a compile error.
 export const GOAL_MET_THRESHOLD = 0.8;
 
+// User-facing "daily goal completed" = 100% of effectiveGoal (same bar as the
+// celebration latch). Distinct from GOAL_MET_THRESHOLD (0.8, analytics/streaks).
+export function isDailyGoalMet(): boolean {
+  const { consumed } = useWaterStore.getState();
+  const { useGoalStore } = require('./useGoalStore');
+  const { effectiveGoal } = useGoalStore.getState();
+  return effectiveGoal > 0 && consumed >= effectiveGoal;
+}
+
+// Re-runs the goal-aware scheduler so OS triggers reflect the latest goal
+// state (suppressed for today once met, restored if undo drops below goal).
+function rescheduleReminders(): void {
+  const { useUserStore } = require('./useUserStore');
+  const { wakeUpTime, sleepTime, remindersEnabled } = useUserStore.getState();
+  const { scheduleReminders } = require('../utils/notificationScheduler');
+  // Fire-and-forget; scheduleReminders has its own try/catch + console.warn.
+  scheduleReminders(wakeUpTime, sleepTime, remindersEnabled);
+}
+
 function getTodayDate(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -75,6 +94,7 @@ export const useWaterStore = create<WaterState>()(
         // orthogonal to analytics 80% threshold).
         if (!wasCelebrated && newConsumed >= effectiveGoal) {
           set({ goalCelebratedToday: true });
+          rescheduleReminders(); // goal hit 100% → suppress remaining reminders today
         }
         // Goal Met analytics flag: strict-cross of 80% of effectiveGoal, once per day.
         const threshold = GOAL_MET_THRESHOLD * effectiveGoal;
@@ -103,6 +123,7 @@ export const useWaterStore = create<WaterState>()(
       undoLastLog: () => {
         const { lastLogAmount, consumed, lastLoggedAt } = get();
         if (lastLogAmount === null) return;
+        const wasCelebrated = get().goalCelebratedToday;
         const timeSinceLogSec = lastLoggedAt
           ? Math.max(0, Math.round((Date.now() - new Date(lastLoggedAt).getTime()) / 1000))
           : 0;
@@ -115,6 +136,9 @@ export const useWaterStore = create<WaterState>()(
         const { useGoalStore } = require('./useGoalStore');
         const { effectiveGoal } = useGoalStore.getState();
         writeWidgetData(effectiveGoal, newConsumed, null);
+        if (wasCelebrated && newConsumed < effectiveGoal) {
+          rescheduleReminders(); // dropped back under goal → restore today's reminders
+        }
 
         track('Log Undone', {
           amount_ml: lastLogAmount,
